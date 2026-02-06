@@ -1,8 +1,27 @@
 @import "tailwindcss";
 
+@property --mosaic-angle {
+  syntax: "<angle>";
+  initial-value: 135deg;
+  inherits: false;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050608;
+  --foreground: #ededed;
+  --mosaic-blue: #3b82f6;
+  --mosaic-teal: #14b8a6;
+  --mosaic-green: #22c55e;
+  --mosaic-yellow: #eab308;
+  --mosaic-orange: #f97316;
+  --mosaic-gradient: linear-gradient(
+    var(--mosaic-angle, 135deg),
+    var(--mosaic-blue),
+    var(--mosaic-teal),
+    var(--mosaic-green),
+    var(--mosaic-yellow),
+    var(--mosaic-orange)
+  );
 }
 
 @theme inline {
@@ -14,7 +33,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #050608;
     --foreground: #ededed;
   }
 }
@@ -22,5 +41,372 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* ============================================
+   Landing page animations
+   ============================================ */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes grain {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-5%, -10%);
+  }
+  30% {
+    transform: translate(3%, -15%);
+  }
+  50% {
+    transform: translate(12%, 9%);
+  }
+  70% {
+    transform: translate(9%, 4%);
+  }
+  90% {
+    transform: translate(-1%, 7%);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Film grain overlay */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  width: 300%;
+  height: 300%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  animation: grain 8s steps(10) infinite;
+  opacity: 0.3;
+}
+
+/* ============================================
+   Mosaic Glass Panel
+   Frosted glass with animated chromatic border
+   ============================================ */
+.mosaic-panel {
+  position: relative;
+  background: rgba(6, 10, 18, 0.7);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.03) inset,
+    0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Animated chromatic border ring */
+.mosaic-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--mosaic-gradient);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.4;
+  animation: mosaic-border-shift 8s linear infinite;
+}
+
+/* Inner chromatic gloss wash */
+.mosaic-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.07) 0%,
+    transparent 20%,
+    rgba(20, 184, 166, 0.04) 40%,
+    transparent 60%,
+    rgba(234, 179, 8, 0.03) 80%,
+    rgba(249, 115, 22, 0.05) 100%
+  );
+  pointer-events: none;
+}
+
+/* Panel content above pseudo-elements */
+.mosaic-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes mosaic-border-shift {
+  to {
+    --mosaic-angle: 495deg;
+  }
+}
+
+/* ============================================
+   Mosaic Chip Buttons (filter pills)
+   ============================================ */
+.mosaic-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+  transition: all 0.2s ease;
+}
+
+.mosaic-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mosaic-chip-active {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.15),
+    rgba(20, 184, 166, 0.12)
+  );
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.mosaic-chip-active:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.22),
+    rgba(20, 184, 166, 0.18)
+  );
+}
+
+.mosaic-chip-focus {
+  background: linear-gradient(135deg, var(--mosaic-blue), var(--mosaic-teal));
+  border: 1px solid transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+}
+
+/* ============================================
+   Mosaic Action Buttons
+   ============================================ */
+.mosaic-btn {
+  background: rgba(6, 10, 18, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.mosaic-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.mosaic-btn-active {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.18),
+    rgba(20, 184, 166, 0.14),
+    rgba(234, 179, 8, 0.08)
+  );
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.mosaic-btn-primary {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.25),
+    rgba(20, 184, 166, 0.2),
+    rgba(234, 179, 8, 0.12)
+  );
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 10px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.mosaic-btn-primary:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.35),
+    rgba(20, 184, 166, 0.3),
+    rgba(234, 179, 8, 0.2)
+  );
+}
+
+.mosaic-btn-primary:disabled {
+  opacity: 0.3;
+}
+
+/* ============================================
+   Mosaic Progress Bar
+   ============================================ */
+.mosaic-progress {
+  background: linear-gradient(
+    90deg,
+    var(--mosaic-blue),
+    var(--mosaic-teal),
+    var(--mosaic-green)
+  );
+  border-radius: 9999px;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+/* ============================================
+   Mosaic Form Inputs (within panels)
+   ============================================ */
+.mosaic-panel input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.35),
+    rgba(20, 184, 166, 0.35),
+    rgba(34, 197, 94, 0.3),
+    rgba(234, 179, 8, 0.3),
+    rgba(249, 115, 22, 0.35)
+  );
+  outline: none;
+}
+
+.mosaic-panel input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+}
+
+.mosaic-panel input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid rgba(59, 130, 246, 0.4);
+  cursor: pointer;
+}
+
+.mosaic-panel select {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+/* ============================================
+   Mosaic Muscle Tag
+   ============================================ */
+.mosaic-tag {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.15),
+    rgba(20, 184, 166, 0.12)
+  );
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: rgba(180, 210, 255, 0.9);
+  border-radius: 9999px;
+}
+
+/* ============================================
+   Mosaic Scrollbar
+   ============================================ */
+.mosaic-panel::-webkit-scrollbar,
+.mosaic-panel *::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mosaic-panel::-webkit-scrollbar-track,
+.mosaic-panel *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mosaic-panel::-webkit-scrollbar-thumb,
+.mosaic-panel *::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(59, 130, 246, 0.25),
+    rgba(20, 184, 166, 0.2),
+    rgba(249, 115, 22, 0.2)
+  );
+  border-radius: 2px;
 }
