@@ -3,7 +3,7 @@
 // Single source of truth: shared/muscle_groups.json
 // ============================================
 
-import muscleGroupData from "../../../shared/muscle_groups.json";
+import muscleGroupData from "@/data/muscle_groups.json";
 
 export type MuscleGroup = keyof typeof muscleGroupData;
 
