@@ -199,8 +199,11 @@ export function PhysioScene() {
     Set<string>
   >(new Set());
 
-  // All mesh IDs from the GLTF model (for chat AI)
+  // All mesh IDs and positions from the GLTF model (for chat AI)
   const [allMeshIds, setAllMeshIds] = useState<string[]>([]);
+  const [meshPositionMap, setMeshPositionMap] = useState<
+    Map<string, THREE.Vector3>
+  >(new Map());
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
@@ -349,6 +352,38 @@ export function PhysioScene() {
     setWorkoutHighlightMeshIds(new Set(meshIds ?? []));
   }, []);
 
+  const handleSelectMusclesFromChat = useCallback(
+    (meshIds: string[]) => {
+      setSelectedMuscles(new Set(meshIds));
+      // Close edit panel since this is a chat-driven selection
+      setEditingMuscle(null);
+      setEditPosition(null);
+
+      if (meshIds.length === 0) {
+        setFocusTarget(null);
+        return;
+      }
+
+      // Compute centroid from mesh positions
+      const positions = meshIds
+        .map((id) => meshPositionMap.get(id))
+        .filter((p): p is THREE.Vector3 => p != null);
+      if (positions.length > 0) {
+        let cx = 0;
+        let cy = 0;
+        let cz = 0;
+        for (const pos of positions) {
+          cx += pos.x;
+          cy += pos.y;
+          cz += pos.z;
+        }
+        const n = positions.length;
+        setFocusTarget(positions[0].clone().set(cx / n, cy / n, cz / n));
+      }
+    },
+    [meshPositionMap],
+  );
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       <Canvas
@@ -422,6 +457,7 @@ export function PhysioScene() {
             }
             visualOverrides={visualOverrides}
             onMeshIdsExtracted={setAllMeshIds}
+            onMeshPositionsExtracted={setMeshPositionMap}
           />
 
           <OrbitControls
@@ -497,6 +533,7 @@ export function PhysioScene() {
               onHighlightMuscles={(meshIds) =>
                 setChatHighlightMeshIds(new Set(meshIds))
               }
+              onSelectMuscles={handleSelectMusclesFromChat}
               selectedMuscles={selectedMuscles}
               allMeshIds={allMeshIds}
               activeGroups={activeGroups}

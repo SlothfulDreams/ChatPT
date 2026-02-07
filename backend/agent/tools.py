@@ -9,6 +9,7 @@ to the frontend for client-side execution.
 
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -327,6 +328,44 @@ _ACTION_TOOLS: list[ToolSpec] = [
                         },
                     },
                     "required": ["summary", "structuresAffected"],
+                },
+            },
+        },
+    ),
+    ToolSpec(
+        name="select_muscles",
+        kind=ToolKind.ACTION,
+        step_label="Selecting muscles on model",
+        schema={
+            "type": "function",
+            "function": {
+                "name": "select_muscles",
+                "description": (
+                    "Select and highlight specific muscles on the 3D body model. "
+                    "Use when the user describes a body area or pain location without "
+                    "having manually selected muscles. Also use to correct a previous "
+                    "selection if the user says the wrong area was highlighted. "
+                    "This REPLACES the entire current selection. "
+                    "For bilateral symptoms, include BOTH sides (e.g. both 'Deltoidl' and 'Deltoidl_1'). "
+                    "Only use mesh IDs from the available list."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "meshIds": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "List of exact mesh IDs to select on the model. "
+                                "Use _1 suffix for right side muscles."
+                            ),
+                        },
+                        "reason": {
+                            "type": "string",
+                            "description": "Brief explanation of why these muscles were selected.",
+                        },
+                    },
+                    "required": ["meshIds", "reason"],
                 },
             },
         },

@@ -7,7 +7,22 @@ muscles) into the system prompt suffix.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
+
+_MUSCLE_GROUPS: dict[str, list[str]] | None = None
+
+
+def _load_muscle_groups() -> dict[str, list[str]]:
+    global _MUSCLE_GROUPS
+    if _MUSCLE_GROUPS is None:
+        path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "shared"
+            / "muscle_groups.json"
+        )
+        _MUSCLE_GROUPS = json.loads(path.read_text())
+    return _MUSCLE_GROUPS
 
 
 def build_context(
@@ -74,6 +89,19 @@ def build_context(
             else:
                 lines.append(f"- {mesh_id}: (no data yet)")
         parts.append("\n".join(lines))
+    else:
+        groups = _load_muscle_groups()
+        group_summary = ", ".join(
+            f"{k.replace('_', ' ')}: {', '.join(v[:3])}..." for k, v in groups.items()
+        )
+        parts.append(
+            "\n\n## No Muscles Selected\n"
+            "The user has NOT selected any muscles on the 3D model. "
+            "If they describe a body area or pain location, call `select_muscles` "
+            "with the relevant mesh IDs and include your text response in the same turn.\n\n"
+            f"Muscle group mapping (group -> example patterns): {group_summary}\n"
+            "Match these patterns against the available mesh IDs list above to find exact IDs."
+        )
 
     # Active muscle groups
     if active_groups:

@@ -69,6 +69,7 @@ const markdownComponents: Components = {
 interface ChatPanelProps {
   onClose: () => void;
   onHighlightMuscles?: (meshIds: string[]) => void;
+  onSelectMuscles?: (meshIds: string[]) => void;
   selectedMuscles?: Set<string>;
   allMeshIds?: string[];
   activeGroups?: Set<MuscleGroup>;
@@ -78,6 +79,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   onClose,
   onHighlightMuscles,
+  onSelectMuscles,
   selectedMuscles,
   allMeshIds,
   activeGroups,
@@ -95,7 +97,7 @@ export function ChatPanel({
     conversations,
     activeConversationId,
     conversationTitle,
-  } = useChat(allMeshIds, activeGroups);
+  } = useChat(allMeshIds, activeGroups, onSelectMuscles);
   const [input, setInput] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -603,6 +605,8 @@ function ActionChip({
         return `Updated ${formatMuscleName(action.params.meshId)}`;
       case "create_assessment":
         return "Assessment created";
+      case "select_muscles":
+        return `Selected ${action.params.meshIds.length} muscles`;
     }
   })();
 
@@ -612,6 +616,8 @@ function ActionChip({
         return [action.params.meshId];
       case "create_assessment":
         return action.params.structuresAffected;
+      case "select_muscles":
+        return action.params.meshIds;
       default:
         return [];
     }

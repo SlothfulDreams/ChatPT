@@ -154,6 +154,7 @@ interface MuscleModelProps {
   workoutHighlightMeshIds?: Set<string>;
   visualOverrides?: Record<string, MuscleVisualOverride>;
   onMeshIdsExtracted?: (meshIds: string[]) => void;
+  onMeshPositionsExtracted?: (posMap: Map<string, THREE.Vector3>) => void;
 }
 
 // ============================================
@@ -173,6 +174,7 @@ export function MuscleModel({
   workoutHighlightMeshIds,
   visualOverrides,
   onMeshIdsExtracted,
+  onMeshPositionsExtracted,
 }: MuscleModelProps) {
   const { scene } = useGLTF("/models/myological_body.gltf");
   const groupRef = useRef<THREE.Group>(null);
@@ -184,20 +186,25 @@ export function MuscleModel({
     return SkeletonUtils.clone(scene) as THREE.Group;
   }, [scene]);
 
-  // Extract all valid mesh IDs from the GLTF scene for the chat AI
+  // Extract all valid mesh IDs and world positions from the GLTF scene
   useEffect(() => {
-    if (meshIdsExtractedRef.current || !onMeshIdsExtracted) return;
+    if (meshIdsExtractedRef.current) return;
     const ids: string[] = [];
+    const posMap = new Map<string, THREE.Vector3>();
     clonedScene.traverse((child) => {
       if (!(child as THREE.Mesh).isMesh) return;
       if (shouldHideMesh(child.name)) return;
       ids.push(child.name);
+      const pos = new THREE.Vector3();
+      (child as THREE.Mesh).getWorldPosition(pos);
+      posMap.set(child.name, pos);
     });
     if (ids.length > 0) {
       meshIdsExtractedRef.current = true;
-      onMeshIdsExtracted(ids);
+      onMeshIdsExtracted?.(ids);
+      onMeshPositionsExtracted?.(posMap);
     }
-  }, [clonedScene, onMeshIdsExtracted]);
+  }, [clonedScene, onMeshIdsExtracted, onMeshPositionsExtracted]);
 
   // Rotation lerp
   useFrame(() => {

@@ -29,7 +29,18 @@ export interface CreateAssessmentAction {
   };
 }
 
-export type ChatAction = UpdateMuscleAction | CreateAssessmentAction;
+export interface SelectMusclesAction {
+  name: "select_muscles";
+  params: {
+    meshIds: string[];
+    reason: string;
+  };
+}
+
+export type ChatAction =
+  | UpdateMuscleAction
+  | CreateAssessmentAction
+  | SelectMusclesAction;
 
 export interface AgentSubstep {
   tool: string;
@@ -68,7 +79,11 @@ interface MuscleContext {
 // Hook
 // ============================================
 
-export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
+export function useChat(
+  allMeshIds?: string[],
+  activeGroups?: Set<string>,
+  onSelectMuscles?: (meshIds: string[]) => void,
+) {
   const user = useQuery(api.users.current);
   const body = useQuery(
     api.body.getByUser,
@@ -136,8 +151,21 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
     async (actions: ChatAction[], messageId: Id<"messages">) => {
       if (!body) return;
 
-      for (const action of actions) {
+      // Process select_muscles first so the model highlights before updates
+      const sorted = [...actions].sort((a, b) => {
+        if (a.name === "select_muscles" && b.name !== "select_muscles")
+          return -1;
+        if (a.name !== "select_muscles" && b.name === "select_muscles")
+          return 1;
+        return 0;
+      });
+
+      for (const action of sorted) {
         switch (action.name) {
+          case "select_muscles": {
+            onSelectMuscles?.(action.params.meshIds);
+            break;
+          }
           case "update_muscle": {
             const p = action.params;
             await upsertMuscle({
@@ -171,7 +199,7 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
 
       await markActionsApplied({ messageId });
     },
-    [body, muscles, upsertMuscle, markActionsApplied],
+    [body, muscles, upsertMuscle, markActionsApplied, onSelectMuscles],
   );
 
   // Send a message
@@ -273,6 +301,10 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
           },
         );
 
+        if (!response.ok) {
+          throw new Error(`Backend returned ${response.status}`);
+        }
+
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         let fullContent = "";
@@ -280,12 +312,21 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
         let toolThread: unknown[] | undefined;
 
         if (reader) {
+          let sseBuffer = "";
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
+            sseBuffer += decoder.decode(value, { stream: true });
+
+            // Extract only complete lines (terminated by \n)
+            const lastNewline = sseBuffer.lastIndexOf("\n");
+            if (lastNewline === -1) continue;
+
+            const complete = sseBuffer.slice(0, lastNewline);
+            sseBuffer = sseBuffer.slice(lastNewline + 1);
+
+            const lines = complete.split("\n");
 
             for (const line of lines) {
               if (!line.startsWith("data: ")) continue;
@@ -361,6 +402,19 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
               } catch {
                 // Skip malformed SSE lines
               }
+            }
+          }
+          // Flush any remaining buffer after stream closes
+          if (sseBuffer.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(sseBuffer.slice(6));
+              if (data.type === "done") {
+                fullContent = data.content;
+                actions = data.actions ?? [];
+                toolThread = data.toolThread;
+              }
+            } catch {
+              /* ignore */
             }
           }
         }
