@@ -28,14 +28,10 @@ import {
 import { CameraController } from "./camera-controller";
 import { ChatPanel } from "./chat-panel";
 import { MuscleDetailPanel } from "./muscle-detail-panel";
+import { MuscleFeelingsPanel } from "./muscle-feelings-panel";
 import { MuscleFilter } from "./muscle-filter";
 import { MuscleModel } from "./muscle-model";
 import { SkeletonModel } from "./skeleton-model";
-import {
-  DEFAULT_VISUAL,
-  type MuscleVisualOverride,
-  StructureEditPanel3D,
-} from "./structure-edit-panel-3d";
 import { WorkoutPanel } from "./workout-panel";
 
 // ============================================
@@ -148,7 +144,7 @@ function EditPanelPositioner({
 }
 
 export function PhysioScene() {
-  const { muscleStates, isLoading } = useBodyState();
+  const { body, muscleStates, isLoading } = useBodyState();
 
   // Selection state
   const [selectedMuscles, setSelectedMuscles] = useState<Set<string>>(
@@ -178,11 +174,6 @@ export function PhysioScene() {
     DEFAULT_RENDERING_SETTINGS,
   );
   const [focusTarget, setFocusTarget] = useState<THREE.Vector3 | null>(null);
-
-  // Visual overrides (per-muscle material playground)
-  const [visualOverrides, setVisualOverrides] = useState<
-    Record<string, MuscleVisualOverride>
-  >({});
 
   // Chat state
   const [isChatOpen, setIsChatOpen] = useState(true);
@@ -481,7 +472,6 @@ export function PhysioScene() {
                 ? new Set([...workoutTargetMeshIds, ...workoutHighlightMeshIds])
                 : undefined
             }
-            visualOverrides={visualOverrides}
             onMeshIdsExtracted={setAllMeshIds}
             onMeshPositionsExtracted={setMeshPositionMap}
           />
@@ -515,14 +505,14 @@ export function PhysioScene() {
           screenY={editScreenPos.y}
         >
           <div className="flex flex-col gap-2">
-            <StructureEditPanel3D
-              muscleId={editingMuscle}
-              visual={visualOverrides[editingMuscle] ?? DEFAULT_VISUAL}
-              onVisualChange={(v) =>
-                setVisualOverrides((prev) => ({ ...prev, [editingMuscle]: v }))
-              }
-              onClose={handleCloseEdit}
-            />
+            {body && (
+              <MuscleFeelingsPanel
+                muscleId={editingMuscle}
+                muscleState={muscleStates[editingMuscle] ?? null}
+                bodyId={body._id}
+                onClose={handleCloseEdit}
+              />
+            )}
             <MuscleDetailPanel
               muscleId={editingMuscle}
               muscleState={muscleStates[editingMuscle] ?? null}

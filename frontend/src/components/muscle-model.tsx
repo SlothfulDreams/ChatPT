@@ -18,7 +18,6 @@ import {
   shouldShowMuscle,
 } from "@/types/muscle-groups";
 import type { RenderingSettings } from "@/types/rendering";
-import type { MuscleVisualOverride } from "./structure-edit-panel-3d";
 
 useGLTF.preload("/models/myological_body.gltf");
 
@@ -152,7 +151,6 @@ interface MuscleModelProps {
   ) => void;
   onMuscleHover?: (muscleId: string | null) => void;
   workoutHighlightMeshIds?: Set<string>;
-  visualOverrides?: Record<string, MuscleVisualOverride>;
   onMeshIdsExtracted?: (meshIds: string[]) => void;
   onMeshPositionsExtracted?: (posMap: Map<string, THREE.Vector3>) => void;
 }
@@ -172,7 +170,6 @@ export function MuscleModel({
   onMuscleClick,
   onMuscleHover,
   workoutHighlightMeshIds,
-  visualOverrides,
   onMeshIdsExtracted,
   onMeshPositionsExtracted,
 }: MuscleModelProps) {
@@ -277,21 +274,12 @@ export function MuscleModel({
         emissiveIntensity = conditionParams.emissiveIntensity;
       }
 
-      // Apply visual override if present
-      const vo = visualOverrides?.[mesh.name];
-      if (vo && isHighlighted) {
-        finalColor = new THREE.Color(vo.color[0], vo.color[1], vo.color[2]);
-        finalOpacity = vo.opacity;
-        emissiveColor = finalColor.clone();
-        emissiveIntensity = vo.emissiveIntensity;
-      }
-
       mesh.material = new THREE.MeshStandardMaterial({
         color: finalColor,
         transparent: true,
         opacity: finalOpacity,
-        metalness: vo?.metalness ?? renderingSettings.metalness,
-        roughness: vo?.roughness ?? 1.0,
+        metalness: renderingSettings.metalness,
+        roughness: 1.0,
         wireframe: renderingSettings.wireframe,
         emissive: emissiveColor,
         emissiveIntensity,
@@ -304,9 +292,7 @@ export function MuscleModel({
     selectedDepths,
     renderingSettings,
     selectedMuscles,
-    selectedGroup,
     workoutHighlightMeshIds,
-    visualOverrides,
   ]);
 
   // Click handler
