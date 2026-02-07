@@ -77,7 +77,7 @@ async def research(query: str, focus: str = "") -> str:
     """
     client = _get_research_client()
     runner = DedalusRunner(client)
-    model = os.environ.get("TOOL_MODEL", "cerebras/llama-3.3-70b")
+    model = os.environ.get("TOOL_MODEL", "cerebras/gpt-oss-120b")
 
     prompt = f"Research the following clinical question thoroughly. Use multiple search tools to gather comprehensive evidence. Synthesize your findings into a clear, evidence-based summary.\n\nQuery: {query}"
     if focus:

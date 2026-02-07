@@ -38,7 +38,7 @@ async def run_agent_stream(
     messages: list[dict],
     *,
     orchestrator_model: str = "openai/gpt-5.3",
-    tool_model: str = "cerebras/llama-3.3-70b",
+    tool_model: str = "cerebras/gpt-oss-120b",
 ) -> AsyncGenerator[str, None]:
     """Run the agentic loop, yielding SSE-formatted strings.
 

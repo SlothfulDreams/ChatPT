@@ -56,7 +56,7 @@ class BodyContext(BaseModel):
 
 class MessageInput(BaseModel):
     role: str
-    content: str
+    content: str | None = None
     tool_calls: list[dict] | None = None
     tool_call_id: str | None = None
 
@@ -96,7 +96,7 @@ async def chat(request: ChatRequest):
 
     # Rebuild full conversation including tool messages
     for msg in request.conversationHistory:
-        entry: dict = {"role": msg.role, "content": msg.content}
+        entry: dict = {"role": msg.role, "content": msg.content or ""}
         if msg.tool_calls:
             entry["tool_calls"] = msg.tool_calls
         if msg.tool_call_id:
