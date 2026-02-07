@@ -1,22 +1,24 @@
 """Unified tool registry.
 
-Classifies tools as INTERNAL (results fed back to model) or ACTION
-(results sent to frontend for client-side execution).
+Orchestrator tools exposed to the main agentic loop.
+RAG search tools are wrapped into a single `research` agent-as-tool
+that uses a fast/cheap model (Cerebras Llama 3.3 70B) internally.
+ACTION tools (muscle updates, assessments) are collected and sent
+to the frontend for client-side execution.
 """
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable
 
+from dedalus_labs import AsyncDedalus, DedalusRunner
+
 from dedalus_tools.tools import (
+    ALL_TOOLS as RAG_TOOLS,
     get_patient_muscle_context,
-    search_by_condition,
-    search_by_content_type,
-    search_by_exercise,
-    search_by_muscle_group,
-    search_knowledge_base,
 )
 
 
@@ -35,160 +37,108 @@ class ToolSpec:
 
 
 # ---------------------------------------------------------------------------
-# Internal tools -- results fed back to model
+# Research agent-as-tool (wraps all RAG search tools)
+# ---------------------------------------------------------------------------
+
+_research_client: AsyncDedalus | None = None
+
+
+def _get_research_client() -> AsyncDedalus:
+    """BYOK Dedalus client for research sub-agent (Cerebras)."""
+    global _research_client
+    if _research_client is None:
+        cerebras_key = os.environ.get("CEREBRAS_API_KEY", "")
+        if cerebras_key:
+            _research_client = AsyncDedalus(
+                provider="cerebras",
+                provider_key=cerebras_key,
+            )
+        else:
+            # Fallback to default Dedalus routing
+            _research_client = AsyncDedalus()
+    return _research_client
+
+
+async def research(query: str, focus: str = "") -> str:
+    """Research clinical evidence using the physical therapy knowledge base.
+
+    A sub-agent searches across exercises, conditions, muscle groups,
+    content types, and general clinical evidence. It autonomously decides
+    which search strategies to use and synthesizes findings.
+
+    Args:
+        query: What to research (e.g., "rotator cuff impingement rehab protocols").
+        focus: Optional focus area to guide research. Can be a muscle group
+            (e.g., "shoulders"), condition (e.g., "ACL tear"), content type
+            (e.g., "exercise_technique"), or exercise name (e.g., "bench press").
+
+    Returns:
+        Synthesized research findings with cited sources.
+    """
+    client = _get_research_client()
+    runner = DedalusRunner(client)
+    model = os.environ.get("TOOL_MODEL", "cerebras/llama-3.3-70b")
+
+    prompt = f"Research the following clinical question thoroughly. Use multiple search tools to gather comprehensive evidence. Synthesize your findings into a clear, evidence-based summary.\n\nQuery: {query}"
+    if focus:
+        prompt += f"\nFocus area: {focus}"
+
+    result = await runner.run(
+        input=prompt,
+        model=model,
+        tools=RAG_TOOLS,
+        max_steps=5,
+        instructions=(
+            "You are a clinical research assistant. Search the knowledge base "
+            "using the available tools to find relevant evidence. Use multiple "
+            "search strategies (general search, by condition, by muscle group, "
+            "by exercise, by content type) as appropriate. Synthesize findings "
+            "concisely with source references."
+        ),
+        max_tokens=2048,
+    )
+    return result.final_output
+
+
+# ---------------------------------------------------------------------------
+# Internal tools -- results fed back to orchestrator
 # ---------------------------------------------------------------------------
 
 _INTERNAL_TOOLS: list[ToolSpec] = [
     ToolSpec(
-        name="search_knowledge_base",
+        name="research",
         kind=ToolKind.INTERNAL,
-        function=search_knowledge_base,
-        step_label="Searching knowledge base",
+        function=research,
+        step_label="Researching clinical evidence",
         schema={
             "type": "function",
             "function": {
-                "name": "search_knowledge_base",
+                "name": "research",
                 "description": (
-                    "Search the physical therapy knowledge base for clinical evidence. "
-                    "Use for general questions about treatments, exercises, protocols, or evidence."
+                    "Research clinical evidence using a sub-agent that searches the "
+                    "physical therapy knowledge base. The sub-agent autonomously "
+                    "decides which search strategies to use (general search, by "
+                    "condition, muscle group, exercise, or content type) and "
+                    "synthesizes findings. Use this before making any clinical "
+                    "recommendations."
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "query": {
                             "type": "string",
-                            "description": "Natural language search query.",
+                            "description": "What to research (e.g., 'rotator cuff impingement rehab protocols').",
                         },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 5).",
+                        "focus": {
+                            "type": "string",
+                            "description": (
+                                "Optional focus area: a muscle group (e.g., 'shoulders'), "
+                                "condition ('ACL tear'), content type ('exercise_technique'), "
+                                "or exercise name ('bench press')."
+                            ),
                         },
                     },
                     "required": ["query"],
-                },
-            },
-        },
-    ),
-    ToolSpec(
-        name="search_by_muscle_group",
-        kind=ToolKind.INTERNAL,
-        function=search_by_muscle_group,
-        step_label="Searching by muscle group",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "search_by_muscle_group",
-                "description": (
-                    "Search for content related to a specific muscle group. "
-                    "Valid groups: neck, upper_back, lower_back, chest, shoulders, "
-                    "rotator_cuff, biceps, triceps, forearms, core, hip_flexors, "
-                    "glutes, quads, adductors, hamstrings, calves, shins."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "muscle_group": {
-                            "type": "string",
-                            "description": "One of the 17 muscle group names.",
-                        },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 5).",
-                        },
-                    },
-                    "required": ["muscle_group"],
-                },
-            },
-        },
-    ),
-    ToolSpec(
-        name="search_by_condition",
-        kind=ToolKind.INTERNAL,
-        function=search_by_condition,
-        step_label="Searching by condition",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "search_by_condition",
-                "description": (
-                    "Search for evidence related to a clinical condition or diagnosis. "
-                    "Use for condition-specific protocols, rehabilitation guidelines, or treatment evidence."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "condition": {
-                            "type": "string",
-                            "description": 'Condition or diagnosis (e.g., "ACL tear", "frozen shoulder").',
-                        },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 5).",
-                        },
-                    },
-                    "required": ["condition"],
-                },
-            },
-        },
-    ),
-    ToolSpec(
-        name="search_by_content_type",
-        kind=ToolKind.INTERNAL,
-        function=search_by_content_type,
-        step_label="Searching by content type",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "search_by_content_type",
-                "description": (
-                    "Search within a specific content category. "
-                    "Valid types: exercise_technique, rehab_protocol, pathology, "
-                    "assessment, anatomy, training_principles, reference_data."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "content_type": {
-                            "type": "string",
-                            "description": "The content category to filter on.",
-                        },
-                        "query": {
-                            "type": "string",
-                            "description": "Search query within that category.",
-                        },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 5).",
-                        },
-                    },
-                    "required": ["content_type", "query"],
-                },
-            },
-        },
-    ),
-    ToolSpec(
-        name="search_by_exercise",
-        kind=ToolKind.INTERNAL,
-        function=search_by_exercise,
-        step_label="Searching exercise database",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "search_by_exercise",
-                "description": "Search for information about a specific exercise.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "exercise": {
-                            "type": "string",
-                            "description": 'Exercise name (e.g., "bench press", "shoulder external rotation").',
-                        },
-                        "top_k": {
-                            "type": "integer",
-                            "description": "Number of results (default 5).",
-                        },
-                    },
-                    "required": ["exercise"],
                 },
             },
         },

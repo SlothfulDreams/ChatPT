@@ -105,10 +105,13 @@ async def chat(request: ChatRequest):
 
     messages.append({"role": "user", "content": request.message})
 
-    model = os.getenv("DEDALUS_MODEL", "openai/gpt-5.2")
+    orchestrator_model = os.getenv("ORCHESTRATOR_MODEL", "openai/gpt-5.3")
+    tool_model = os.getenv("TOOL_MODEL", "cerebras/llama-3.3-70b")
 
     return StreamingResponse(
-        run_agent_stream(messages, model),
+        run_agent_stream(
+            messages, orchestrator_model=orchestrator_model, tool_model=tool_model
+        ),
         media_type="text/event-stream",
     )
 

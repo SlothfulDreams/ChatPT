@@ -1,14 +1,15 @@
 """Multi-turn agentic loop with streaming.
 
 Streams SSE events to the frontend while executing an agentic
-tool-calling loop. Internal tools (RAG, patient context) feed results
-back to the model. Action tools (muscle updates) are collected and
-sent to the frontend for client-side execution.
+tool-calling loop. Internal tools (research sub-agent, patient context)
+feed results back to the model. Action tools (muscle updates) are
+collected and sent to the frontend for client-side execution.
 """
 
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from collections.abc import AsyncGenerator
 
@@ -22,6 +23,7 @@ _client: AsyncDedalus | None = None
 
 
 def _get_client() -> AsyncDedalus:
+    """Default Dedalus client for the orchestrator."""
     global _client
     if _client is None:
         _client = AsyncDedalus()
@@ -34,7 +36,9 @@ def _sse(data: dict) -> str:
 
 async def run_agent_stream(
     messages: list[dict],
-    model: str,
+    *,
+    orchestrator_model: str = "openai/gpt-5.3",
+    tool_model: str = "cerebras/llama-3.3-70b",
 ) -> AsyncGenerator[str, None]:
     """Run the agentic loop, yielding SSE-formatted strings.
 
@@ -44,9 +48,13 @@ async def run_agent_stream(
         text_delta    - incremental text from the model
         done          - final response with content + actions + tool thread
 
+    The orchestrator model handles all turns (reasoning + tool dispatch).
+    The tool_model is used by the research sub-agent internally.
+
     Args:
         messages: Full conversation history (system + user + assistant + tool messages).
-        model: Model identifier for the Dedalus API.
+        orchestrator_model: High-reasoning model for the orchestrator loop.
+        tool_model: Passed via env for the research sub-agent (not used directly here).
 
     Yields:
         SSE-formatted strings.
@@ -55,12 +63,11 @@ async def run_agent_stream(
     tools = get_openai_tools()
     accumulated_actions: list[dict] = []
     final_text = ""
-    # Track all intermediate messages produced during this request
     tool_thread: list[dict] = []
 
     for _turn in range(MAX_TURNS):
         stream = await client.chat.completions.create(
-            model=model,
+            model=orchestrator_model,
             messages=messages,
             tools=tools,
             stream=True,
@@ -156,9 +163,13 @@ async def run_agent_stream(
                 # Emit step start
                 yield _sse({"type": "step", "label": spec.step_label, "tool": name})
 
-                # Execute (sync tools run in thread pool)
+                # Execute -- async tools (research sub-agent) awaited directly,
+                # sync tools (get_patient_muscle_context) run in thread pool
                 try:
-                    result = await asyncio.to_thread(spec.function, **params)
+                    if inspect.iscoroutinefunction(spec.function):
+                        result = await spec.function(**params)
+                    else:
+                        result = await asyncio.to_thread(spec.function, **params)
                     result_str = str(result)
                 except Exception as e:
                     result_str = f"Tool error: {e}"
