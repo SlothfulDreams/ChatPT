@@ -650,9 +650,9 @@ export function WorkoutPanel({
                       selectedPlanId &&
                       resetProgress({ planId: selectedPlanId })
                     }
-                    className="mt-1 self-end text-xs text-white/30 transition-colors hover:text-white/60"
+                    className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 py-2 text-xs font-semibold text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                   >
-                    Reset progress
+                    Reset Workout
                   </button>
                 )}
               </div>

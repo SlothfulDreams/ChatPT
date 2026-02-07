@@ -1,13 +1,45 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatMuscleName, getSideLabel } from "@/lib/muscle-utils";
 import type { MuscleCondition, MuscleState } from "@/types/muscle";
 import { getMuscleDepth } from "@/types/muscle-depth";
 import { getMuscleGroup, MUSCLE_GROUP_LABELS } from "@/types/muscle-groups";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+
+// ============================================
+// Color interpolation for severity slider
+// ============================================
+
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [
+    Number.parseInt(h.slice(0, 2), 16),
+    Number.parseInt(h.slice(2, 4), 16),
+    Number.parseInt(h.slice(4, 6), 16),
+  ];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const toHex = (n: number) =>
+    Math.round(Math.min(255, Math.max(0, n)))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+const GREEN_RGB = hexToRgb("#22c55e");
+
+function lerpColor(accent: string, t: number): string {
+  const [ar, ag, ab] = hexToRgb(accent);
+  return rgbToHex(
+    GREEN_RGB[0] + (ar - GREEN_RGB[0]) * t,
+    GREEN_RGB[1] + (ag - GREEN_RGB[1]) * t,
+    GREEN_RGB[2] + (ab - GREEN_RGB[2]) * t,
+  );
+}
 
 // ============================================
 // Feelings catalog
@@ -44,7 +76,7 @@ const FEELINGS: FeelingDef[] = [
   {
     label: "Numbness",
     condition: "knotted",
-    accent: "#6366f1",
+    accent: "#818cf8",
     description: "Loss of sensation",
   },
   {
@@ -56,7 +88,7 @@ const FEELINGS: FeelingDef[] = [
   {
     label: "Weakness",
     condition: "weak",
-    accent: "#3b82f6",
+    accent: "#60a5fa",
     description: "Lack of strength",
   },
   {
@@ -78,6 +110,18 @@ const FEELINGS: FeelingDef[] = [
     accent: "#fb7185",
     description: "Painful to touch",
   },
+  {
+    label: "Torn",
+    condition: "torn",
+    accent: "#b91c1c",
+    description: "Severe muscle tear",
+  },
+  {
+    label: "Recovering",
+    condition: "recovering",
+    accent: "#38bdf8",
+    description: "Healing in progress",
+  },
 ];
 
 function conditionToFeeling(
@@ -93,6 +137,74 @@ function stateToLocal(ms: MuscleState | null) {
     feeling: conditionToFeeling(ms.condition) ?? null,
     severity: ms.metrics.pain,
   };
+}
+
+// ============================================
+// Severity Slider — track + thumb color matches the green-to-accent interpolation
+// ============================================
+
+function SeveritySlider({
+  muscleId,
+  accent,
+  severity,
+  onChange,
+}: {
+  muscleId: string;
+  accent: string;
+  severity: number;
+  onChange: (v: number) => void;
+}) {
+  const t = severity / 10;
+  const currentColor = lerpColor(accent, t);
+  const pct = t * 100;
+
+  return (
+    <div className="mb-3">
+      <div className="mb-1 flex items-center justify-between">
+        <label
+          htmlFor={`severity-${muscleId}`}
+          className="text-xs text-white/50"
+        >
+          Severity
+        </label>
+        <span className="text-xs font-medium" style={{ color: currentColor }}>
+          {severity.toFixed(0)} / 10
+        </span>
+      </div>
+      <div className="relative h-4 flex items-center">
+        {/* Track background (unfilled) */}
+        <div className="absolute inset-x-0 h-1.5 rounded-full bg-white/10" />
+        {/* Track filled */}
+        <div
+          className="absolute left-0 h-1.5 rounded-full"
+          style={{
+            width: `${pct}%`,
+            background: `linear-gradient(to right, #22c55e, ${currentColor})`,
+          }}
+        />
+        {/* Native range input (transparent, captures interaction) */}
+        <input
+          id={`severity-${muscleId}`}
+          type="range"
+          min={0}
+          max={10}
+          step={1}
+          value={severity}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="severity-slider absolute inset-0 w-full cursor-pointer appearance-none bg-transparent"
+          style={
+            {
+              "--thumb-color": currentColor,
+            } as React.CSSProperties
+          }
+        />
+      </div>
+      <div className="mt-0.5 flex justify-between text-[10px] text-white/30">
+        <span>Mild</span>
+        <span>Severe</span>
+      </div>
+    </div>
+  );
 }
 
 // ============================================
@@ -266,42 +378,12 @@ export function MuscleFeelingsPanel({
 
       {/* Severity slider — shown when a feeling is selected */}
       {selectedFeeling && (
-        <div className="mb-3">
-          <div className="mb-1 flex items-center justify-between">
-            <label
-              htmlFor={`severity-${muscleId}`}
-              className="text-xs text-white/50"
-            >
-              Severity
-            </label>
-            <span
-              className="text-xs font-medium"
-              style={{ color: selectedFeeling.accent }}
-            >
-              {severity.toFixed(0)} / 10
-            </span>
-          </div>
-          <input
-            id={`severity-${muscleId}`}
-            type="range"
-            min={0}
-            max={10}
-            step={1}
-            value={severity}
-            onChange={(e) => handleSeverityChange(Number(e.target.value))}
-            className="w-full"
-            style={{
-              accentColor: selectedFeeling.accent,
-              background: `linear-gradient(to right, #22c55e, ${selectedFeeling.accent})`,
-              borderRadius: "4px",
-              height: "6px",
-            }}
-          />
-          <div className="mt-0.5 flex justify-between text-[10px] text-white/30">
-            <span>Mild</span>
-            <span>Severe</span>
-          </div>
-        </div>
+        <SeveritySlider
+          muscleId={muscleId}
+          accent={selectedFeeling.accent}
+          severity={severity}
+          onChange={handleSeverityChange}
+        />
       )}
 
       {/* Action row: Confirm + Clear */}

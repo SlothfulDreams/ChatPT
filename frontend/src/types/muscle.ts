@@ -71,8 +71,8 @@ export const CONDITION_RENDERING: Record<
     opacity: 0.88,
   },
   knotted: {
-    baseColor: [0.55, 0.25, 0.1],
-    emissiveColor: [0.5, 0.2, 0.05],
+    baseColor: [0.35, 0.3, 0.7],
+    emissiveColor: [0.3, 0.25, 0.65],
     emissiveIntensity: 0.2,
     opacity: 0.9,
   },
@@ -105,8 +105,8 @@ export const CONDITION_RENDERING: Record<
     pulseIntensity: 0.4,
   },
   weak: {
-    baseColor: [0.35, 0.35, 0.25],
-    emissiveColor: [0.2, 0.2, 0.1],
+    baseColor: [0.25, 0.4, 0.6],
+    emissiveColor: [0.15, 0.3, 0.55],
     emissiveIntensity: 0.1,
     opacity: 0.7,
   },
@@ -127,14 +127,14 @@ export const CONDITION_HSL: Record<
   { hue: number; saturation: number }
 > = {
   healthy: { hue: 130, saturation: 0.6 },
-  tight: { hue: 40, saturation: 0.65 },
-  knotted: { hue: 25, saturation: 0.6 },
-  strained: { hue: 10, saturation: 0.65 },
+  tight: { hue: 30, saturation: 0.65 },
+  knotted: { hue: 235, saturation: 0.55 },
+  strained: { hue: 5, saturation: 0.7 },
   torn: { hue: 0, saturation: 0.8 },
-  recovering: { hue: 200, saturation: 0.5 },
-  inflamed: { hue: 5, saturation: 0.75 },
-  weak: { hue: 50, saturation: 0.3 },
-  fatigued: { hue: 280, saturation: 0.3 },
+  recovering: { hue: 200, saturation: 0.55 },
+  inflamed: { hue: 350, saturation: 0.75 },
+  weak: { hue: 217, saturation: 0.5 },
+  fatigued: { hue: 275, saturation: 0.45 },
 };
 
 /**

@@ -437,7 +437,7 @@ body {
 /* ============================================
    Mosaic Form Inputs (within panels)
    ============================================ */
-.mosaic-panel input[type="range"] {
+.mosaic-panel input[type="range"]:not(.severity-slider) {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
@@ -453,7 +453,7 @@ body {
   outline: none;
 }
 
-.mosaic-panel input[type="range"]::-webkit-slider-thumb {
+.mosaic-panel input[type="range"]:not(.severity-slider)::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 14px;
   height: 14px;
@@ -464,13 +464,52 @@ body {
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
 }
 
-.mosaic-panel input[type="range"]::-moz-range-thumb {
+.mosaic-panel input[type="range"]:not(.severity-slider)::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: white;
   border: 2px solid rgba(59, 130, 246, 0.4);
   cursor: pointer;
+}
+
+/* ============================================
+   Severity Slider — thumb color driven by --thumb-color CSS variable
+   ============================================ */
+.severity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent !important;
+  outline: none;
+}
+
+.severity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--thumb-color, #22c55e);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  box-shadow: 0 0 8px
+    color-mix(in srgb, var(--thumb-color, #22c55e) 40%, transparent);
+}
+
+.severity-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--thumb-color, #22c55e);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  box-shadow: 0 0 8px
+    color-mix(in srgb, var(--thumb-color, #22c55e) 40%, transparent);
+}
+
+.severity-slider::-moz-range-track {
+  background: transparent;
+  border: none;
+  height: 0;
 }
 
 .mosaic-panel select {
