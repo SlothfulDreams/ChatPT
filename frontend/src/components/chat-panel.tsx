@@ -1,8 +1,64 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Components } from "react-markdown";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { type ChatAction, type ChatMessage, useChat } from "@/hooks/useChat";
 import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
+
+const markdownComponents: Components = {
+  p: ({ children }) => (
+    <p className="mb-2 whitespace-pre-wrap last:mb-0">{children}</p>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-white/95">{children}</strong>
+  ),
+  em: ({ children }) => <em className="text-white/60">{children}</em>,
+  h1: ({ children }) => <h1 className="mb-1 text-sm font-bold">{children}</h1>,
+  h2: ({ children }) => <h2 className="mb-1 text-xs font-bold">{children}</h2>,
+  h3: ({ children }) => (
+    <h3 className="mb-1 text-xs font-semibold">{children}</h3>
+  ),
+  ul: ({ children }) => (
+    <ul className="mb-2 ml-4 list-disc space-y-0.5 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-2 ml-4 list-decimal space-y-0.5 last:mb-0">{children}</ol>
+  ),
+  li: ({ children }) => <li>{children}</li>,
+  code: ({ className, children }) => {
+    const isBlock = className?.includes("language-");
+    if (isBlock) {
+      return <code className="text-blue-300/80 text-[11px]">{children}</code>;
+    }
+    return (
+      <code className="rounded bg-white/10 px-1 text-blue-300/80">
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="mb-2 overflow-x-auto rounded-lg bg-white/5 p-2.5 last:mb-0">
+      {children}
+    </pre>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="mb-2 border-l-2 border-white/20 pl-2 text-white/50 last:mb-0">
+      {children}
+    </blockquote>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-400 underline hover:text-blue-300"
+    >
+      {children}
+    </a>
+  ),
+};
 
 interface ChatPanelProps {
   onClose: () => void;
@@ -379,7 +435,13 @@ function MessageBubble({
           isUser ? "mosaic-tag text-white/90" : "bg-white/5 text-white/80"
         } ${message.isStreaming ? "animate-pulse" : ""}`}
       >
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        {isUser ? (
+          <p className="whitespace-pre-wrap">{message.content}</p>
+        ) : (
+          <Markdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+            {message.content}
+          </Markdown>
+        )}
 
         {message.actions && message.actions.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1 border-t border-white/10 pt-2">
