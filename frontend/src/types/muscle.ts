@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 // ============================================
-// Conditions & State
+// Conditions & Rendering
 // ============================================
 
 export type MuscleCondition =
@@ -14,13 +14,6 @@ export type MuscleCondition =
   | "inflamed"
   | "weak"
   | "fatigued";
-
-export interface KnotPoint {
-  id?: string;
-  position: THREE.Vector3;
-  severity: number;
-  type: "trigger_point" | "adhesion" | "spasm";
-}
 
 export interface MuscleState {
   id?: string;
@@ -37,7 +30,6 @@ export interface MuscleState {
   lastUpdated?: Date;
   notes?: string;
   summary?: string;
-  knots: KnotPoint[];
 }
 
 export type MuscleStates = Record<string, MuscleState>;
@@ -46,7 +38,6 @@ export function createDefaultMuscleState(): MuscleState {
   return {
     condition: "healthy",
     metrics: { pain: 0, strength: 1, mobility: 1 },
-    knots: [],
   };
 }
 

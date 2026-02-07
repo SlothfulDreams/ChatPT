@@ -258,7 +258,7 @@ export function MuscleModel({
 
       // Apply visual override if present
       const vo = visualOverrides?.[mesh.name];
-      if (vo) {
+      if (vo && isHighlighted) {
         finalColor = new THREE.Color(vo.color[0], vo.color[1], vo.color[2]);
         finalOpacity = vo.opacity;
         emissiveColor = finalColor.clone();

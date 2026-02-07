@@ -429,8 +429,8 @@ export function PhysioScene() {
 
       {/* UI Overlays */}
       <div className="pointer-events-none absolute inset-0 flex">
-        {/* Left: Filters */}
-        <div className="flex flex-col gap-3 p-3">
+        {/* Left: Filters + Workout */}
+        <div className="flex h-full min-h-0 w-72 flex-col gap-3 p-3 pb-14">
           <MuscleFilter
             activeGroups={activeGroups}
             onToggleGroup={handleToggleGroup}
@@ -440,10 +440,6 @@ export function PhysioScene() {
             selectedGroup={selectedGroup}
             onSelectGroup={handleSelectGroup}
           />
-        </div>
-
-        {/* Right: Workout panel + chat — flush to edge, fill height */}
-        <div className="ml-auto flex h-full min-h-0 flex-col gap-2 overflow-hidden p-2 pb-14">
           {isWorkoutOpen && (
             <WorkoutPanel
               isWorkoutMode={isWorkoutMode}
@@ -454,6 +450,10 @@ export function PhysioScene() {
               onClose={handleCloseWorkout}
             />
           )}
+        </div>
+
+        {/* Right: Chat — flush to edge, fill height */}
+        <div className="ml-auto flex h-full min-h-0 flex-col gap-2 overflow-hidden p-2 pb-14">
           {isChatOpen && (
             <ChatPanel
               onClose={() => setIsChatOpen(false)}

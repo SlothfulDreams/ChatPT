@@ -10,7 +10,6 @@
 
 import type * as body from "../body.js";
 import type * as chat from "../chat.js";
-import type * as knots from "../knots.js";
 import type * as muscles from "../muscles.js";
 import type * as users from "../users.js";
 import type * as workouts from "../workouts.js";
@@ -24,7 +23,6 @@ import type {
 declare const fullApi: ApiFromModules<{
   body: typeof body;
   chat: typeof chat;
-  knots: typeof knots;
   muscles: typeof muscles;
   users: typeof users;
   workouts: typeof workouts;

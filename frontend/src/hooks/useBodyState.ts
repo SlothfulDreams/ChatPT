@@ -16,17 +16,11 @@ export function useBodyState() {
     api.muscles.getByBody,
     body ? { bodyId: body._id } : "skip",
   );
-  const allKnots = useQuery(
-    api.knots.getByBody,
-    body ? { bodyId: body._id } : "skip",
-  );
-
   const muscleStates: MuscleStates = useMemo(() => {
     if (!muscles) return {};
 
     const states: MuscleStates = {};
     for (const m of muscles) {
-      const muscleKnots = allKnots?.filter((k) => k.muscleId === m._id) ?? [];
       const state: MuscleState = {
         id: m._id,
         condition: m.condition as MuscleState["condition"],
@@ -42,17 +36,11 @@ export function useBodyState() {
         lastUpdated: new Date(m.updatedAt),
         notes: m.notes ?? undefined,
         summary: m.summary ?? undefined,
-        knots: muscleKnots.map((k) => ({
-          id: k._id,
-          position: { x: k.positionX, y: k.positionY, z: k.positionZ } as any,
-          severity: k.severity,
-          type: k.type as "trigger_point" | "adhesion" | "spasm",
-        })),
       };
       states[m.meshId] = state;
     }
     return states;
-  }, [muscles, allKnots]);
+  }, [muscles]);
 
   return {
     user,

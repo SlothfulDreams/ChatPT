@@ -49,7 +49,7 @@ export function MuscleFilter({
   onSelectGroup,
 }: MuscleFilterProps) {
   return (
-    <div className="pointer-events-auto mosaic-panel flex max-h-[80vh] w-56 flex-col gap-3 overflow-y-auto p-3">
+    <div className="pointer-events-auto mosaic-panel flex w-full shrink-0 flex-col gap-3 overflow-y-auto p-3">
       {/* Group Filters */}
       <div>
         <div className="mb-2 flex items-center justify-between">

@@ -36,20 +36,12 @@ export const boneCondition = v.union(
   v.literal("healing"),
 );
 
-export const knotType = v.union(
-  v.literal("trigger_point"),
-  v.literal("adhesion"),
-  v.literal("spasm"),
-);
-
 export const historyEventType = v.union(
   v.literal("pain_reported"),
   v.literal("condition_changed"),
   v.literal("treatment_applied"),
   v.literal("exercise_completed"),
   v.literal("assessment_completed"),
-  v.literal("knot_added"),
-  v.literal("knot_removed"),
   v.literal("note_added"),
   v.literal("severity_updated"),
 );
@@ -71,7 +63,11 @@ export const assessmentSource = v.union(
   v.literal("device"),
 );
 
-export const messageRole = v.union(v.literal("user"), v.literal("assistant"));
+export const messageRole = v.union(
+  v.literal("user"),
+  v.literal("assistant"),
+  v.literal("tool"),
+);
 
 // ============================================
 // Schema
@@ -148,16 +144,6 @@ export default defineSchema({
     .index("by_body", ["bodyId"])
     .index("by_body_mesh", ["bodyId", "meshId"]),
 
-  // ---- Knots / Trigger Points ----
-  knots: defineTable({
-    muscleId: v.id("muscles"),
-    positionX: v.number(),
-    positionY: v.number(),
-    positionZ: v.number(),
-    severity: v.number(),
-    type: knotType,
-  }).index("by_muscle", ["muscleId"]),
-
   // ---- History: Muscles ----
   muscleHistory: defineTable({
     muscleId: v.id("muscles"),
@@ -215,6 +201,8 @@ export default defineSchema({
     content: v.string(),
     actions: v.optional(v.array(v.any())),
     actionsApplied: v.optional(v.boolean()),
+    // Tool thread: intermediate tool_call + tool_result messages from agentic loop
+    toolThread: v.optional(v.array(v.any())),
   }).index("by_conversation", ["conversationId"]),
 
   // ---- Muscle Assessments (Evidence Chain) ----

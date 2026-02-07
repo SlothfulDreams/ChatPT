@@ -38,6 +38,7 @@ export const getMessages = query({
       content: v.string(),
       actions: v.optional(v.array(v.any())),
       actionsApplied: v.optional(v.boolean()),
+      toolThread: v.optional(v.array(v.any())),
     }),
   ),
   handler: async (ctx, args) => {
@@ -102,6 +103,7 @@ export const addMessage = mutation({
     role: messageRole,
     content: v.string(),
     actions: v.optional(v.array(v.any())),
+    toolThread: v.optional(v.array(v.any())),
   },
   returns: v.id("messages"),
   handler: async (ctx, args) => {
@@ -112,6 +114,7 @@ export const addMessage = mutation({
       content: args.content,
       actions: args.actions,
       actionsApplied: args.actions ? false : undefined,
+      toolThread: args.toolThread,
     });
   },
 });

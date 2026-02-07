@@ -27,6 +27,63 @@ export default async function LandingPage() {
             backgroundSize: "64px 64px",
           }}
         />
+        {/* Scattered pixel squares */}
+        <div
+          className="mosaic-pixel mosaic-pixel-blue mosaic-pixel-animate"
+          style={{ top: "12%", left: "8%" }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-blue"
+          style={{ top: "45%", left: "5%", width: 4, height: 4, opacity: 0.4 }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-teal mosaic-pixel-animate"
+          style={{ top: "28%", right: "12%", animationDelay: "1.2s" }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-blue"
+          style={{
+            bottom: "22%",
+            right: "7%",
+            width: 8,
+            height: 8,
+            opacity: 0.35,
+          }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-orange mosaic-pixel-animate"
+          style={{
+            top: "65%",
+            left: "15%",
+            width: 4,
+            height: 4,
+            animationDelay: "0.7s",
+          }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-green"
+          style={{
+            top: "18%",
+            right: "25%",
+            width: 3,
+            height: 3,
+            opacity: 0.3,
+          }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-teal"
+          style={{
+            bottom: "35%",
+            left: "22%",
+            width: 5,
+            height: 5,
+            opacity: 0.25,
+          }}
+        />
+        <div
+          className="mosaic-pixel mosaic-pixel-blue mosaic-pixel-animate"
+          style={{ bottom: "15%", left: "45%", animationDelay: "2s" }}
+        />
       </div>
 
       {/* Anatomical line art SVG - abstract body wireframe */}
@@ -116,7 +173,7 @@ export default async function LandingPage() {
 
           {/* Title */}
           <h1
-            className="animate-fade-up mb-6 text-5xl font-bold leading-[1.1] tracking-tight text-white sm:text-7xl"
+            className="animate-fade-up mosaic-text-rgb mb-6 text-5xl font-bold leading-[1.1] tracking-tight text-white sm:text-7xl"
             style={{ animationDelay: "0.35s" }}
           >
             Your body,{" "}
@@ -197,7 +254,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="mosaic-panel group p-5 transition-all hover:scale-[1.02]">
+    <div className="mosaic-panel mosaic-panel-rgb group p-5 transition-all hover:scale-[1.02]">
       <span className="mb-3 block font-mono text-[10px] tracking-[0.2em] text-white/20">
         {label}
       </span>

@@ -43,6 +43,12 @@ export type ChatAction =
   | AddKnotAction
   | CreateAssessmentAction;
 
+export interface AgentStep {
+  tool: string;
+  label: string;
+  status: "running" | "complete";
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -50,6 +56,7 @@ export interface ChatMessage {
   actions?: ChatAction[];
   actionsApplied?: boolean;
   isStreaming?: boolean;
+  steps?: AgentStep[];
 }
 
 interface MuscleContext {
@@ -96,20 +103,20 @@ export function useChat() {
   const addMessage = useMutation(api.chat.addMessage);
   const markActionsApplied = useMutation(api.chat.markActionsApplied);
   const upsertMuscle = useMutation(api.muscles.upsert);
-  const addKnot = useMutation(api.knots.add);
   const setConversationTitle = useMutation(api.chat.setConversationTitle);
   const switchConversationMut = useMutation(api.chat.switchConversation);
   const deleteConversationMut = useMutation(api.chat.deleteConversation);
 
   // Local streaming state
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingSteps, setStreamingSteps] = useState<AgentStep[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   // Build unified messages list: stored + streaming
   const messages: ChatMessage[] = useMemo(() => {
-    const stored = (storedMessages ?? []).map((m) => ({
-      id: m._id,
+    const stored: ChatMessage[] = (storedMessages ?? []).map((m) => ({
+      id: m._id as string,
       role: m.role as "user" | "assistant",
       content: m.content,
       actions: m.actions as ChatAction[] | undefined,
@@ -122,11 +129,12 @@ export function useChat() {
         role: "assistant",
         content: streamingContent,
         isStreaming: true,
+        steps: streamingSteps,
       });
     }
 
     return stored;
-  }, [storedMessages, isStreaming, streamingContent]);
+  }, [storedMessages, isStreaming, streamingContent, streamingSteps]);
 
   // Execute actions returned by the LLM
   const executeActions = useCallback(
@@ -158,21 +166,6 @@ export function useChat() {
             });
             break;
           }
-          case "add_knot": {
-            const p = action.params;
-            const muscle = muscles?.find((m) => m.meshId === p.meshId);
-            if (muscle) {
-              await addKnot({
-                muscleId: muscle._id,
-                positionX: 0,
-                positionY: 0,
-                positionZ: 0,
-                severity: p.severity,
-                type: p.type,
-              });
-            }
-            break;
-          }
           case "create_assessment": {
             // Assessment creation can be added later -- the data is persisted
             // on the message itself for now
@@ -183,7 +176,7 @@ export function useChat() {
 
       await markActionsApplied({ messageId });
     },
-    [body, muscles, upsertMuscle, addKnot, markActionsApplied],
+    [body, muscles, upsertMuscle, markActionsApplied],
   );
 
   // Send a message
@@ -222,16 +215,36 @@ export function useChat() {
         summary: m.summary ?? undefined,
       }));
 
-      const conversationHistory = (storedMessages ?? []).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // Build conversation history, expanding toolThread for agentic state
+      const conversationHistory: {
+        role: string;
+        content: string;
+        tool_calls?: unknown[];
+        tool_call_id?: string;
+      }[] = [];
+      for (const m of storedMessages ?? []) {
+        conversationHistory.push({ role: m.role, content: m.content });
+        // Expand stored tool thread (intermediate assistant+tool messages from agentic loop)
+        if (m.toolThread && Array.isArray(m.toolThread)) {
+          for (const threadMsg of m.toolThread) {
+            conversationHistory.push(
+              threadMsg as {
+                role: string;
+                content: string;
+                tool_calls?: unknown[];
+                tool_call_id?: string;
+              },
+            );
+          }
+        }
+      }
 
       const availableMeshIds = (muscles ?? []).map((m) => m.meshId);
 
       // Start streaming
       setIsStreaming(true);
       setStreamingContent("");
+      setStreamingSteps([]);
       const abort = new AbortController();
       abortRef.current = abort;
 
@@ -265,6 +278,7 @@ export function useChat() {
         const decoder = new TextDecoder();
         let fullContent = "";
         let actions: ChatAction[] = [];
+        let toolThread: unknown[] | undefined;
 
         if (reader) {
           while (true) {
@@ -281,9 +295,31 @@ export function useChat() {
                 if (data.type === "text_delta") {
                   fullContent += data.text;
                   setStreamingContent(fullContent);
+                } else if (data.type === "step") {
+                  setStreamingSteps((prev) => [
+                    ...prev,
+                    {
+                      tool: data.tool,
+                      label: data.label,
+                      status: "running" as const,
+                    },
+                  ]);
+                } else if (data.type === "step_complete") {
+                  setStreamingSteps((prev) =>
+                    prev.map((s) =>
+                      s.tool === data.tool
+                        ? {
+                            ...s,
+                            label: data.label,
+                            status: "complete" as const,
+                          }
+                        : s,
+                    ),
+                  );
                 } else if (data.type === "done") {
                   fullContent = data.content;
                   actions = data.actions ?? [];
+                  toolThread = data.toolThread;
                 }
               } catch {
                 // Skip malformed SSE lines
@@ -298,6 +334,8 @@ export function useChat() {
           role: "assistant",
           content: fullContent,
           actions: actions.length > 0 ? actions : undefined,
+          toolThread:
+            toolThread && toolThread.length > 0 ? toolThread : undefined,
         });
 
         // Execute any actions (update muscles, add knots, etc.)
@@ -317,6 +355,7 @@ export function useChat() {
       } finally {
         setIsStreaming(false);
         setStreamingContent("");
+        setStreamingSteps([]);
         abortRef.current = null;
       }
     },

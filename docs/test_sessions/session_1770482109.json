@@ -1,0 +1,143 @@
+[
+  {
+    "question": "hi when I squat my hips inevitably move to the right side and when I jump my knee hurts what could possibly be the issue",
+    "answer": "Based on the provided context, it's possible that you may be experiencing patellar tendonitis, also known as jumper's knee, which is characterized by pain in the band of tissue that connects the kneecap to the shin bone (Chunk 2, 5). The pain with jumping, running, or walking, especially downhill or downstairs, and pain with bending or straightening the leg, are consistent with the symptoms of patellar tendonitis (Chunk 2, 5).\n\nThe fact that your hips move to the right side when you squat may indicate an issue with your hip or leg alignment, which can contribute to patellar tendonitis (Chunk 5). Overpronation, where the arches of your feet collapse when you walk or run, can also lead to patellar tendonitis (Chunk 5).\n\nTo address the issue, you may want to consider exercises that strengthen the muscles around your knee, such as the quadriceps, hamstrings, and glutes (Chunk 3, 4). Additionally, you may want to work on improving your squat technique, including keeping your weight on your heels and engaging your core (Chunk 3). \n\nIt's also important to note that if you have knee pain, you should consult with a healthcare professional for proper diagnosis and treatment. They can help you develop a personalized exercise program and provide guidance on how to modify your activities to reduce stress on your knee.",
+    "timings": {
+      "retrieve_ms": 977,
+      "rerank_ms": 24771,
+      "generate_ms": 1193
+    },
+    "num_results": 10,
+    "reranked_summaries": [
+      {
+        "summary": "A step-by-step guide to performing a side lunge with squat exercise, focusing on hip strength and range of motion.",
+        "source": "strength_and_conditioning",
+        "score": 0.7569414377212524,
+        "rerank_score": -1.7430769205093384,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Patellar tendonitis, also known as jumper's knee, is a condition characterized by pain in the front of the knee, especially with jumping, running, or walking downhill or downstairs.",
+        "source": "141-_patellar_tendinitis",
+        "score": 0.7175084352493286,
+        "rerank_score": -2.398592472076416,
+        "content_type": "pathology"
+      },
+      {
+        "summary": "The squat is a strength training exercise that involves a large portion of the muscular system and requires proper technique to perform correctly.",
+        "source": "strength_and_conditioning",
+        "score": 0.7037290334701538,
+        "rerank_score": -3.794116735458374,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Three exercises to help alleviate knee pain: heel slide, sitting hip adduction isometrics, and straight leg raise.",
+        "source": "136-_mcl_sprain",
+        "score": 0.7121378183364868,
+        "rerank_score": -4.0555315017700195,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Patellar tendonitis is a condition characterized by pain and inflammation in the patellar tendon, often caused by repetitive stress or alignment problems.",
+        "source": "141-_patellar_tendinitis",
+        "score": 0.7134422659873962,
+        "rerank_score": -4.3238630294799805,
+        "content_type": "pathology"
+      }
+    ]
+  },
+  {
+    "question": "q",
+    "answer": "It seems like you forgot to include the actual question. Please provide the question you'd like me to answer based on the given context chunks. I'll do my best to provide a specific and concise answer, referencing the relevant source documents and distinguishing between evidence-based information and general guidance.",
+    "timings": {
+      "retrieve_ms": 532,
+      "rerank_ms": 1504,
+      "generate_ms": 699
+    },
+    "num_results": 10,
+    "reranked_summaries": [
+      {
+        "summary": "Two agility exercises, Scissors and Ali Shuffle, are described with procedures and coaching points.",
+        "source": "strength_and_conditioning",
+        "score": 0.582670271396637,
+        "rerank_score": -8.093713760375977,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "A strength exercise for abdominal muscles, specifically targeting the core, involving heel touches.",
+        "source": "strength_and_conditioning",
+        "score": 0.5546875,
+        "rerank_score": -8.321560859680176,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "A step-by-step guide to performing a deadlift exercise with proper form and technique.",
+        "source": "strength_and_conditioning",
+        "score": 0.5539754033088684,
+        "rerank_score": -8.346382141113281,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Instructions for performing quadriceps and hamstring isometric stretches and a heel slide exercise.",
+        "source": "144-_prepatellar_bursitis",
+        "score": 0.5675771832466125,
+        "rerank_score": -8.387811660766602,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "A drill to improve coordination, balance, acceleration, and deceleration when changing directions rapidly.",
+        "source": "strength_and_conditioning",
+        "score": 0.5501018166542053,
+        "rerank_score": -8.529762268066406,
+        "content_type": "training_principles"
+      }
+    ]
+  },
+  {
+    "question": "exit",
+    "answer": "Exiting the conversation. If you have any further questions or need assistance with physical therapy or exercise techniques, feel free to start a new conversation.",
+    "timings": {
+      "retrieve_ms": 24,
+      "rerank_ms": 651,
+      "generate_ms": 424
+    },
+    "num_results": 10,
+    "reranked_summaries": [
+      {
+        "summary": "A step-by-step guide to performing box jumps, a plyometric exercise that targets the core, glutes, and lower extremities.",
+        "source": "strength_and_conditioning",
+        "score": 0.5537570714950562,
+        "rerank_score": -8.85324478149414,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "The GAS consists of three phases: alarm, resistance, and exhaustion, describing an athlete's response to stress.",
+        "source": "strength_and_conditioning",
+        "score": 0.568889856338501,
+        "rerank_score": -8.973764419555664,
+        "content_type": "training_principles"
+      },
+      {
+        "summary": "A step-by-step guide to lifting a barbell, focusing on proper form and technique.",
+        "source": "strength_and_conditioning",
+        "score": 0.55523681640625,
+        "rerank_score": -9.785039901733398,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Describes the start position for the barbell power clean exercise.",
+        "source": "strength_and_conditioning",
+        "score": 0.5739179253578186,
+        "rerank_score": -10.258913040161133,
+        "content_type": "exercise_technique"
+      },
+      {
+        "summary": "Key coaching points for the bench press exercise.",
+        "source": "strength_and_conditioning",
+        "score": 0.5565502643585205,
+        "rerank_score": -10.301334381103516,
+        "content_type": "exercise_technique"
+      }
+    ]
+  }
+]

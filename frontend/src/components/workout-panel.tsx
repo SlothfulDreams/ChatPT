@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "convex/react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useBodyState } from "@/hooks/useBodyState";
 import { useWorkoutState } from "@/hooks/useWorkoutState";
 import { type GeneratedPlan, generateWorkout } from "@/lib/generate-workout";
@@ -71,7 +71,56 @@ export function WorkoutPanel({
   const addExercise = useMutation(api.workouts.addExercise);
   const updateExercise = useMutation(api.workouts.updateExercise);
   const deleteExercise = useMutation(api.workouts.deleteExercise);
+  const reorderExercises = useMutation(api.workouts.reorderExercises);
   const toggleComplete = useMutation(api.workouts.toggleExerciseComplete);
+
+  // Drag-to-reorder state
+  const [draggedExId, setDraggedExId] = useState<Id<"workoutExercises"> | null>(
+    null,
+  );
+  const [dropTargetIdx, setDropTargetIdx] = useState<number | null>(null);
+  const dragCounter = useRef(0);
+
+  const handleExDragStart = useCallback(
+    (exerciseId: Id<"workoutExercises">) => {
+      setDraggedExId(exerciseId);
+    },
+    [],
+  );
+
+  const handleExDragOver = useCallback((e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDropTargetIdx(idx);
+  }, []);
+
+  const handleExDrop = useCallback(
+    (targetIdx: number) => {
+      if (draggedExId === null || !selectedPlanId) return;
+      const draggedIdx = exercises.findIndex((e) => e._id === draggedExId);
+      if (draggedIdx === -1 || draggedIdx === targetIdx) {
+        setDraggedExId(null);
+        setDropTargetIdx(null);
+        return;
+      }
+      const newOrder = [...exercises];
+      const [dragged] = newOrder.splice(draggedIdx, 1);
+      newOrder.splice(targetIdx, 0, dragged);
+      reorderExercises({
+        planId: selectedPlanId,
+        exerciseIds: newOrder.map((e) => e._id),
+      });
+      setDraggedExId(null);
+      setDropTargetIdx(null);
+    },
+    [draggedExId, selectedPlanId, exercises, reorderExercises],
+  );
+
+  const handleExDragEnd = useCallback(() => {
+    setDraggedExId(null);
+    setDropTargetIdx(null);
+    dragCounter.current = 0;
+  }, []);
 
   const currentPlan = plans.find((p) => p._id === selectedPlanId) ?? null;
   const completedCount = exercises.filter((e) => e.completed).length;
@@ -304,14 +353,14 @@ export function WorkoutPanel({
 
   if (isLoading || !user) {
     return (
-      <div className="pointer-events-auto mosaic-panel w-96 p-4 text-white">
+      <div className="pointer-events-auto mosaic-panel w-full p-4 text-white">
         <p className="text-xs text-white/40">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-96 shrink flex-col text-white">
+    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-full shrink flex-col overflow-hidden text-white">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         {view !== "plan-list" && (
@@ -424,10 +473,16 @@ export function WorkoutPanel({
               </p>
             ) : (
               <div className="flex flex-col gap-1">
-                {exercises.map((exercise) => (
+                {exercises.map((exercise, idx) => (
                   <ExerciseRow
                     key={exercise._id}
                     exercise={exercise}
+                    isDragging={draggedExId === exercise._id}
+                    isDropTarget={dropTargetIdx === idx}
+                    onDragStart={() => handleExDragStart(exercise._id)}
+                    onDragOver={(e) => handleExDragOver(e, idx)}
+                    onDrop={() => handleExDrop(idx)}
+                    onDragEnd={handleExDragEnd}
                     onToggleComplete={() =>
                       toggleComplete({ exerciseId: exercise._id })
                     }
@@ -696,12 +751,24 @@ function PlanCard({
 
 function ExerciseRow({
   exercise,
+  isDragging,
+  isDropTarget,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
   onToggleComplete,
   onEdit,
   onDelete,
   onHover,
 }: {
   exercise: WorkoutExercise;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onDragStart: () => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
   onToggleComplete: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -724,10 +791,28 @@ function ExerciseRow({
 
   return (
     <div
-      className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragOver={onDragOver}
+      onDrop={(e) => {
+        e.preventDefault();
+        onDrop();
+      }}
+      onDragEnd={onDragEnd}
+      className={`group flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5 ${
+        isDragging ? "opacity-30" : ""
+      } ${isDropTarget && !isDragging ? "border-t border-blue-400/50" : ""}`}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
     >
+      {/* Drag handle */}
+      <span className="shrink-0 cursor-grab text-[10px] text-white/20 transition-colors group-hover:text-white/40 active:cursor-grabbing">
+        &#x2630;
+      </span>
+
       {/* Checkbox */}
       <button
         type="button"
@@ -744,7 +829,7 @@ function ExerciseRow({
       </button>
 
       {/* Info */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <span
           className={`block truncate text-xs font-medium ${
             exercise.completed ? "text-white/30 line-through" : ""
@@ -760,7 +845,6 @@ function ExerciseRow({
       {/* Target count badge */}
       {exercise.targetMeshIds.length > 0 && (
         <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 text-xs text-blue-400/70">
-          {/* Count unique (non _1) targets */}
           {exercise.targetMeshIds.filter((id) => !id.endsWith("_1")).length}
         </span>
       )}

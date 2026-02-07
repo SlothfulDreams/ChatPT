@@ -209,6 +209,104 @@ body {
   z-index: 1;
 }
 
+/* ============================================
+   Chromatic Aberration / RGB Fringe
+   Simulates light refraction through glass
+   ============================================ */
+
+/* RGB fringe on panel edges via offset color shadows */
+.mosaic-panel-rgb {
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.03) inset,
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    /* Red channel - offset top-left */
+    -3px -2px 0 rgba(255, 30, 50, 0.08),
+    -2px -1px 4px rgba(255, 30, 50, 0.06),
+    /* Blue channel - offset bottom-right */
+    3px 2px 0 rgba(40, 80, 255, 0.08),
+    2px 1px 4px rgba(40, 80, 255, 0.06),
+    /* Green channel - offset bottom-left */
+    -2px 2px 0 rgba(30, 255, 120, 0.04),
+    -1px 1px 3px rgba(30, 255, 120, 0.03);
+}
+
+/* Stronger variant for hero/focus elements */
+.mosaic-panel-rgb-strong {
+  box-shadow:
+    0 0 0 0.5px rgba(255, 255, 255, 0.03) inset,
+    0 4px 24px rgba(0, 0, 0, 0.4),
+    -4px -3px 0 rgba(255, 30, 50, 0.12),
+    -3px -2px 8px rgba(255, 30, 50, 0.08),
+    4px 3px 0 rgba(40, 80, 255, 0.12),
+    3px 2px 8px rgba(40, 80, 255, 0.08),
+    -3px 3px 0 rgba(30, 255, 120, 0.06),
+    -2px 2px 6px rgba(30, 255, 120, 0.04);
+}
+
+/* Chromatic aberration on text */
+.mosaic-text-rgb {
+  text-shadow:
+    -1px 0 rgba(255, 30, 50, 0.3),
+    1px 0 rgba(40, 80, 255, 0.3),
+    0 1px rgba(30, 255, 120, 0.15);
+}
+
+/* Subtle version for body text */
+.mosaic-text-rgb-subtle {
+  text-shadow:
+    -0.5px 0 rgba(255, 30, 50, 0.15),
+    0.5px 0 rgba(40, 80, 255, 0.15);
+}
+
+/* ============================================
+   Decorative Pixel Squares
+   Small scattered mosaic tiles
+   ============================================ */
+.mosaic-pixel {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.mosaic-pixel-blue {
+  background: var(--mosaic-blue);
+}
+
+.mosaic-pixel-teal {
+  background: var(--mosaic-teal);
+}
+
+.mosaic-pixel-orange {
+  background: var(--mosaic-orange);
+}
+
+.mosaic-pixel-green {
+  background: var(--mosaic-green);
+}
+
+/* Animated pixel flicker */
+@keyframes pixel-flicker {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.2;
+  }
+  75% {
+    opacity: 0.7;
+  }
+}
+
+.mosaic-pixel-animate {
+  animation: pixel-flicker 3s steps(1) infinite;
+}
+
 @keyframes mosaic-border-shift {
   to {
     --mosaic-angle: 495deg;

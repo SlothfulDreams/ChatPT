@@ -4,7 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Components } from "react-markdown";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { type ChatAction, type ChatMessage, useChat } from "@/hooks/useChat";
+import {
+  type AgentStep,
+  type ChatAction,
+  type ChatMessage,
+  useChat,
+} from "@/hooks/useChat";
 import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
 
 const markdownComponents: Components = {
@@ -482,9 +487,14 @@ function MessageBubble({
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-          isUser ? "mosaic-tag text-white/90" : "bg-white/5 text-white/80"
+          isUser ? "bg-white/5 text-white/80" : "bg-white/5 text-white/80"
         } ${message.isStreaming ? "animate-pulse" : ""}`}
       >
+        {/* Agent steps indicator */}
+        {message.steps && message.steps.length > 0 && (
+          <StepsIndicator steps={message.steps} />
+        )}
+
         {isUser ? (
           <p className="whitespace-pre-wrap">{message.content}</p>
         ) : (
@@ -511,6 +521,30 @@ function MessageBubble({
 }
 
 // ============================================
+// Steps Indicator (agentic tool execution feedback)
+// ============================================
+
+function StepsIndicator({ steps }: { steps: AgentStep[] }) {
+  return (
+    <div className="mb-2 space-y-1 border-b border-white/5 pb-2">
+      {steps.map((step) => (
+        <div
+          key={step.tool}
+          className="flex items-center gap-1.5 text-[10px] text-white/40"
+        >
+          {step.status === "running" ? (
+            <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-white/20 border-t-white/60" />
+          ) : (
+            <span className="text-emerald-400/70">--</span>
+          )}
+          <span>{step.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
 // Action Chip
 // ============================================
 
@@ -527,8 +561,6 @@ function ActionChip({
     switch (action.name) {
       case "update_muscle":
         return `Updated ${formatMuscleName(action.params.meshId)}`;
-      case "add_knot":
-        return `Added ${action.params.type.replace("_", " ")} to ${formatMuscleName(action.params.meshId)}`;
       case "create_assessment":
         return "Assessment created";
     }
@@ -537,10 +569,11 @@ function ActionChip({
   const meshIds = (() => {
     switch (action.name) {
       case "update_muscle":
-      case "add_knot":
         return [action.params.meshId];
       case "create_assessment":
         return action.params.structuresAffected;
+      default:
+        return [];
     }
   })();
 
