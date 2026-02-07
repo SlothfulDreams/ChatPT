@@ -58,7 +58,7 @@ What `chunks.json` looks like after Stage 2:
 
 ### muscle_groups (enum, multi-select)
 
-17 groups sourced from `shared/muscle_groups.json`:
+17 groups sourced from `backend/data/muscle_groups.json`:
 
 | Key | Region |
 |-----|--------|
@@ -125,7 +125,7 @@ Point {
   payload: {
     text:          string       // the raw chunk text (what's returned)
     source:        string       // filename (e.g. "strength_and_conditioning.pdf")
-    muscle_groups: string[]     // enum values from shared/muscle_groups.json
+    muscle_groups: string[]     // enum values from backend/data/muscle_groups.json
     conditions:    string[]     // free-form clinical conditions
     exercises:     string[]     // free-form exercise names
     content_type:  string       // one of the 7 content type enums

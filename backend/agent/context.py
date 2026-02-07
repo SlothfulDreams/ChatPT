@@ -16,11 +16,7 @@ _MUSCLE_GROUPS: dict[str, list[str]] | None = None
 def _load_muscle_groups() -> dict[str, list[str]]:
     global _MUSCLE_GROUPS
     if _MUSCLE_GROUPS is None:
-        path = (
-            Path(__file__).resolve().parent.parent.parent
-            / "shared"
-            / "muscle_groups.json"
-        )
+        path = Path(__file__).resolve().parent.parent / "data" / "muscle_groups.json"
         _MUSCLE_GROUPS = json.loads(path.read_text())
     return _MUSCLE_GROUPS
 

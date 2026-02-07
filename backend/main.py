@@ -27,13 +27,16 @@ from schemas.workout import GenerateWorkoutRequest
 app = FastAPI()
 app.include_router(rag_router, prefix="/rag")
 
+_default_origins = "http://localhost:3000,http://localhost:3001"
+_cors_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", _default_origins).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        os.getenv("FRONTEND_URL", ""),
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

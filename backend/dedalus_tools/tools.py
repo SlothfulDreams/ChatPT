@@ -10,7 +10,7 @@ from pathlib import Path
 from .convex_client import get_convex_client
 from .retrieval.retriever import PTRetriever
 
-_SHARED_JSON = Path(__file__).resolve().parents[2] / "shared" / "muscle_groups.json"
+_SHARED_JSON = Path(__file__).resolve().parents[1] / "data" / "muscle_groups.json"
 
 _retriever = PTRetriever()
 
@@ -126,7 +126,7 @@ def search_by_exercise(exercise: str, top_k: int = 5) -> str:
     return _format_results(results)
 
 
-# Loaded from shared/muscle_groups.json -- single source of truth for all consumers.
+# Loaded from backend/data/muscle_groups.json -- single source of truth for all consumers.
 import json as _json
 
 _MUSCLE_GROUP_PATTERNS: dict[str, list[str]] = _json.loads(_SHARED_JSON.read_text())

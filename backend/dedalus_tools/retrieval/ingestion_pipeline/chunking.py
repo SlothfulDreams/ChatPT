@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from semantic_text_splitter import TextSplitter
 
 # Canonical muscle groups loaded from shared JSON (single source of truth).
-_SHARED_JSON = Path(__file__).resolve().parents[4] / "shared" / "muscle_groups.json"
+_SHARED_JSON = Path(__file__).resolve().parents[3] / "data" / "muscle_groups.json"
 _VALID_MUSCLE_GROUPS: list[str] = list(json.loads(_SHARED_JSON.read_text()).keys())
 
 MuscleGroup = Literal[
@@ -43,7 +43,7 @@ MuscleGroup = Literal[
 
 # Runtime check: Literal stays in sync with JSON.
 assert set(get_args(MuscleGroup)) == set(_VALID_MUSCLE_GROUPS), (
-    f"MuscleGroup Literal out of sync with shared/muscle_groups.json. "
+    f"MuscleGroup Literal out of sync with backend/data/muscle_groups.json. "
     f"Missing from Literal: {set(_VALID_MUSCLE_GROUPS) - set(get_args(MuscleGroup))}, "
     f"Extra in Literal: {set(get_args(MuscleGroup)) - set(_VALID_MUSCLE_GROUPS)}"
 )
