@@ -20,7 +20,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useBodyState } from "@/hooks/useBodyState";
 import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
 import type { MuscleDepth } from "@/types/muscle-depth";
-import type { MuscleGroup } from "@/types/muscle-groups";
+import { getMuscleGroups, type MuscleGroup } from "@/types/muscle-groups";
 import {
   DEFAULT_RENDERING_SETTINGS,
   type RenderingSettings,
@@ -363,6 +363,31 @@ export function PhysioScene() {
       if (meshIds.length === 0) {
         setFocusTarget(null);
         return;
+      }
+
+      // Auto-expand active groups to include the agent-selected muscles
+      // so they aren't dimmed by the group filter
+      const neededGroups = new Set<MuscleGroup>();
+      for (const id of meshIds) {
+        for (const g of getMuscleGroups(id)) {
+          neededGroups.add(g);
+        }
+      }
+      if (neededGroups.size > 0) {
+        setActiveGroups((prev) => {
+          // If no filter is active, don't start one -- all muscles are already visible
+          if (prev.size === 0) return prev;
+          // Merge needed groups into the existing filter
+          const next = new Set(prev);
+          let changed = false;
+          for (const g of neededGroups) {
+            if (!next.has(g)) {
+              next.add(g);
+              changed = true;
+            }
+          }
+          return changed ? next : prev;
+        });
       }
 
       // Compute centroid from mesh positions

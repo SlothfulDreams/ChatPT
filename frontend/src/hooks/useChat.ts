@@ -412,10 +412,11 @@ export function useChat(
                     ),
                   );
                 } else if (data.type === "substep") {
-                  // Add substep under the currently running "research" step
+                  // Add substep under the parent step (matched by parent field)
+                  const parentTool: string = data.parent ?? "research";
                   setStreamingSteps((prev) =>
                     prev.map((s) =>
-                      s.tool === "research"
+                      s.tool === parentTool
                         ? {
                             ...s,
                             substeps: [
@@ -431,9 +432,10 @@ export function useChat(
                     ),
                   );
                 } else if (data.type === "substep_complete") {
+                  const parentTool: string = data.parent ?? "research";
                   setStreamingSteps((prev) =>
                     prev.map((s) =>
-                      s.tool === "research"
+                      s.tool === parentTool
                         ? {
                             ...s,
                             substeps: (s.substeps ?? []).map((sub) =>

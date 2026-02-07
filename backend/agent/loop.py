@@ -37,6 +37,49 @@ def _sse(data: dict) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
+def _format_mesh_id(mesh_id: str) -> str:
+    """Convert a runtime mesh ID to a readable name. e.g. 'Brachialis_musclel' -> 'Brachialis muscle (L)'."""
+    name = mesh_id
+    side = ""
+    if name.endswith("l"):
+        side = " (L)"
+        name = name[:-1]
+    elif name.endswith("r"):
+        side = " (R)"
+        name = name[:-1]
+    # Strip trailing dot/period left from .l/.r removal
+    name = name.rstrip(".")
+    return name.replace("_", " ") + side
+
+
+def _action_label(name: str, params: dict, default_label: str) -> str:
+    """Build a descriptive step label for action tools that includes muscle context."""
+    if name == "select_muscles":
+        mesh_ids = params.get("meshIds", [])
+        if mesh_ids:
+            # Deduplicate bilateral pairs into a single name
+            seen: set[str] = set()
+            names: list[str] = []
+            for mid in mesh_ids:
+                base = mid.rstrip("lr").rstrip(".")
+                if base not in seen:
+                    seen.add(base)
+                    names.append(_format_mesh_id(mid).rsplit(" (", 1)[0])
+            display = ", ".join(names[:4])
+            if len(names) > 4:
+                display += f" +{len(names) - 4} more"
+            return f"Selecting {display}"
+    elif name == "update_muscle":
+        mesh_id = params.get("meshId", "")
+        if mesh_id:
+            readable = _format_mesh_id(mesh_id)
+            condition = params.get("condition", "")
+            if condition:
+                return f"Updating {readable}: {condition}"
+            return f"Updating {readable}"
+    return default_label
+
+
 async def run_agent_stream(
     messages: list[dict],
     *,
@@ -71,6 +114,11 @@ async def run_agent_stream(
     try:
         for _turn in range(MAX_TURNS):
             logger.info("Turn %d/%d starting", _turn + 1, MAX_TURNS)
+
+            # Emit thinking indicator while the model processes
+            thinking_id = f"thinking_{_turn}"
+            yield _sse({"type": "step", "tool": thinking_id, "label": "Thinking..."})
+
             stream = await client.chat.completions.create(
                 model=orchestrator_model,
                 messages=messages,
@@ -82,6 +130,7 @@ async def run_agent_stream(
             tool_calls_by_index: dict[int, dict] = {}
             turn_text = ""
             finish_reason = None
+            thinking_resolved = False
 
             async for chunk in stream:
                 choice = chunk.choices[0] if chunk.choices else None
@@ -91,6 +140,21 @@ async def run_agent_stream(
                 delta = choice.delta
                 if choice.finish_reason:
                     finish_reason = choice.finish_reason
+
+                # Resolve thinking indicator on first meaningful output
+                if (
+                    not thinking_resolved
+                    and delta
+                    and (delta.content or delta.tool_calls)
+                ):
+                    thinking_resolved = True
+                    yield _sse(
+                        {
+                            "type": "step_complete",
+                            "tool": thinking_id,
+                            "label": "Thinking",
+                        }
+                    )
 
                 # Stream text deltas to frontend
                 if delta and delta.content:
@@ -115,6 +179,16 @@ async def run_agent_stream(
                             tool_calls_by_index[idx]["arguments"] += (
                                 tc_delta.function.arguments
                             )
+
+            # Resolve thinking if the stream ended without content (edge case)
+            if not thinking_resolved:
+                yield _sse(
+                    {
+                        "type": "step_complete",
+                        "tool": thinking_id,
+                        "label": "Thinking",
+                    }
+                )
 
             final_text += turn_text
 
@@ -166,14 +240,20 @@ async def run_agent_stream(
                     continue
 
                 if spec.kind == ToolKind.INTERNAL:
+                    # Unique step ID so multiple calls don't collide
+                    step_id = f"{name}_{_turn}_{idx}"
+
                     # Emit step start
-                    yield _sse({"type": "step", "label": spec.step_label, "tool": name})
+                    yield _sse(
+                        {"type": "step", "label": spec.step_label, "tool": step_id}
+                    )
 
                     try:
                         if name == "research":
                             # Research sub-agent: stream substep events via queue
                             event_queue: asyncio.Queue = asyncio.Queue()
                             params["_event_queue"] = event_queue
+                            params["_step_id"] = step_id
 
                             # Run research and drain substep events concurrently
                             research_task = asyncio.create_task(spec.function(**params))
@@ -204,7 +284,7 @@ async def run_agent_stream(
                         {
                             "type": "step_complete",
                             "label": f"{spec.step_label} complete",
-                            "tool": name,
+                            "tool": step_id,
                         }
                     )
 
@@ -218,8 +298,12 @@ async def run_agent_stream(
                     tool_thread.append(tool_msg)
 
                 elif spec.kind == ToolKind.ACTION:
+                    # Build descriptive label with muscle context
+                    label = _action_label(name, params, spec.step_label)
+                    step_id = f"{name}_{idx}"
+
                     # Emit step event so the user sees feedback
-                    yield _sse({"type": "step", "label": spec.step_label, "tool": name})
+                    yield _sse({"type": "step", "label": label, "tool": step_id})
 
                     action = {"name": name, "params": params}
                     accumulated_actions.append(action)
@@ -228,8 +312,8 @@ async def run_agent_stream(
                     yield _sse(
                         {
                             "type": "step_complete",
-                            "label": f"{spec.step_label} complete",
-                            "tool": name,
+                            "label": f"{label} complete",
+                            "tool": step_id,
                         }
                     )
 

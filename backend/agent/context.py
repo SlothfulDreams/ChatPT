@@ -68,11 +68,19 @@ def build_context(
         if body_parts:
             parts.append(f"\n\nUser body info: {', '.join(body_parts)}")
 
-    # Available mesh IDs (cap at 150 to keep prompt reasonable)
-    mesh_ids = available_mesh_ids[:150]
+    # Available mesh IDs grouped by muscle group for structured lookup
+    grouped = _group_mesh_ids(available_mesh_ids)
     parts.append(
-        f"\n\nAvailable muscle mesh IDs (use EXACT names): {json.dumps(mesh_ids)}"
+        "\n\n## Available Muscle Mesh IDs (use EXACT names)\n"
+        "Organized by muscle group. Use the exact mesh ID strings when calling tools.\n"
     )
+    for group_name, ids in grouped.items():
+        label = group_name.replace("_", " ").title()
+        parts.append(f"**{label}**: {json.dumps(ids)}\n")
+    # Include ungrouped meshes so the LLM can still reference them
+    ungrouped = _ungrouped_mesh_ids(available_mesh_ids)
+    if ungrouped:
+        parts.append(f"**Other**: {json.dumps(ungrouped)}\n")
 
     # Selected muscles
     if selected_mesh_ids:
@@ -90,17 +98,13 @@ def build_context(
                 lines.append(f"- {mesh_id}: (no data yet)")
         parts.append("\n".join(lines))
     else:
-        groups = _load_muscle_groups()
-        group_summary = ", ".join(
-            f"{k.replace('_', ' ')}: {', '.join(v[:3])}..." for k, v in groups.items()
-        )
         parts.append(
             "\n\n## No Muscles Selected\n"
             "The user has NOT selected any muscles on the 3D model. "
             "If they describe a body area or pain location, call `select_muscles` "
-            "with the relevant mesh IDs and include your text response in the same turn.\n\n"
-            f"Muscle group mapping (group -> example patterns): {group_summary}\n"
-            "Match these patterns against the available mesh IDs list above to find exact IDs."
+            "with the relevant mesh IDs from the grouped list above and include your "
+            "text response in the same turn.\n"
+            "Use the muscle group headings to find the right mesh IDs for a body area."
         )
 
     # Active muscle groups
@@ -127,6 +131,30 @@ def _has_issues(m: Any) -> bool:
     condition = _attr(m, "condition")
     pain = _attr(m, "pain") or 0
     return condition != "healthy" or pain > 0
+
+
+def _classify_mesh(name: str, groups: dict[str, list[str]]) -> list[str]:
+    """Return which muscle groups a mesh name belongs to."""
+    lower = name.lower().replace("_", " ")
+    return [g for g, patterns in groups.items() if any(p in lower for p in patterns)]
+
+
+def _group_mesh_ids(mesh_ids: list[str]) -> dict[str, list[str]]:
+    """Group mesh IDs by muscle group for structured LLM context."""
+    groups = _load_muscle_groups()
+    result: dict[str, list[str]] = {g: [] for g in groups}
+    for mesh_id in mesh_ids:
+        matched = _classify_mesh(mesh_id, groups)
+        for g in matched:
+            result[g].append(mesh_id)
+    # Drop empty groups
+    return {g: ids for g, ids in result.items() if ids}
+
+
+def _ungrouped_mesh_ids(mesh_ids: list[str]) -> list[str]:
+    """Return mesh IDs that don't match any muscle group."""
+    groups = _load_muscle_groups()
+    return [m for m in mesh_ids if not _classify_mesh(m, groups)]
 
 
 def _format_muscle(m: Any) -> str:

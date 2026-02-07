@@ -73,6 +73,7 @@ async def research(
     query: str,
     focus: str = "",
     _event_queue: asyncio.Queue | None = None,
+    _step_id: str = "research",
 ) -> str:
     """Research clinical evidence using the physical therapy knowledge base.
 
@@ -86,6 +87,7 @@ async def research(
             (e.g., "shoulders"), condition (e.g., "ACL tear"), content type
             (e.g., "exercise_technique"), or exercise name (e.g., "bench press").
         _event_queue: Internal -- queue for pushing substep events to the SSE stream.
+        _step_id: Internal -- parent step ID for linking substep events.
 
     Returns:
         Synthesized research findings with cited sources.
@@ -116,6 +118,8 @@ async def research(
 
     final_text = ""
     seen_tools: set[str] = set()
+    iteration = 0
+    synthesizing_emitted = False
 
     async for chunk in stream:
         if not hasattr(chunk, "choices") or not chunk.choices:
@@ -135,21 +139,45 @@ async def research(
                     seen_tools.add(tc.function.name)
                     label = _SUBTOOL_LABELS.get(tc.function.name, tc.function.name)
                     await _event_queue.put(
-                        {"type": "substep", "tool": tc.function.name, "label": label}
+                        {
+                            "type": "substep",
+                            "tool": tc.function.name,
+                            "label": label,
+                            "parent": _step_id,
+                        }
                     )
 
-        # When we see finish_reason=tool_calls, tools are about to execute.
-        # When we see text after that, tools have completed.
+        # Detect loop iterations via finish_reason=tool_calls
         fr = (
             chunk.choices[0].finish_reason
             if hasattr(chunk.choices[0], "finish_reason")
             else None
         )
         if fr == "tool_calls" and _event_queue:
-            # Mark all seen tools as executing (they run between this chunk and the next text)
-            pass
+            iteration += 1
+            if iteration > 1:
+                iter_id = f"research_iter_{iteration}"
+                await _event_queue.put(
+                    {
+                        "type": "substep",
+                        "tool": iter_id,
+                        "label": f"Analyzing results (pass {iteration})...",
+                        "parent": _step_id,
+                    }
+                )
 
+        # Emit synthesizing substep when text content starts flowing
         if delta.content:
+            if not synthesizing_emitted and _event_queue:
+                synthesizing_emitted = True
+                await _event_queue.put(
+                    {
+                        "type": "substep",
+                        "tool": "synthesizing",
+                        "label": "Synthesizing clinical findings...",
+                        "parent": _step_id,
+                    }
+                )
             final_text += delta.content
 
     # Mark all substeps complete
@@ -161,6 +189,27 @@ async def research(
                     "type": "substep_complete",
                     "tool": tool_name,
                     "label": f"{label} done",
+                    "parent": _step_id,
+                }
+            )
+        # Complete iteration substeps
+        for i in range(2, iteration + 1):
+            await _event_queue.put(
+                {
+                    "type": "substep_complete",
+                    "tool": f"research_iter_{i}",
+                    "label": f"Analysis pass {i} done",
+                    "parent": _step_id,
+                }
+            )
+        # Complete synthesizing substep
+        if synthesizing_emitted:
+            await _event_queue.put(
+                {
+                    "type": "substep_complete",
+                    "tool": "synthesizing",
+                    "label": "Synthesis complete",
+                    "parent": _step_id,
                 }
             )
 
