@@ -90,6 +90,62 @@ function WorldToScreen({
   return null;
 }
 
+/** Positions the edit panel near a screen point, clamped to stay in viewport. */
+function EditPanelPositioner({
+  screenX,
+  screenY,
+  children,
+}: {
+  screenX: number;
+  screenY: number;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [style, setStyle] = useState<React.CSSProperties>({
+    left: screenX + 12,
+    top: screenY,
+    transform: "translateY(-50%)",
+    visibility: "hidden" as const,
+  });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const pad = 8;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Preferred: right of the point, vertically centered
+    let x = screenX + 12;
+    let y = screenY - h / 2;
+
+    // If overflows right, flip to left side
+    if (x + w + pad > vw) {
+      x = screenX - w - 12;
+    }
+    // Clamp left
+    if (x < pad) x = pad;
+    // Clamp top/bottom
+    if (y < pad) y = pad;
+    if (y + h + pad > vh) y = vh - h - pad;
+
+    setStyle({ left: x, top: y, visibility: "visible" });
+  }, [screenX, screenY]);
+
+  return (
+    <div
+      ref={ref}
+      className="pointer-events-auto absolute z-10"
+      style={style}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function PhysioScene() {
   const { muscleStates, isLoading } = useBodyState();
 
@@ -104,6 +160,9 @@ export function PhysioScene() {
     x: number;
     y: number;
   } | null>(null);
+
+  // Selection mode
+  const [selectBothSides, setSelectBothSides] = useState(true);
 
   // Filter state
   const [activeGroups, setActiveGroups] = useState<Set<MuscleGroup>>(new Set());
@@ -141,7 +200,6 @@ export function PhysioScene() {
   >(new Set());
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
-  const selectBothSides = true;
 
   // Auto-open chat when muscles are selected (unless in workout mode)
   useEffect(() => {
@@ -167,8 +225,10 @@ export function PhysioScene() {
   // ---- Handlers ----
 
   const handleMuscleClick = useCallback(
-    (muscleId: string, worldPos: THREE.Vector3, _event: PointerEvent) => {
+    (muscleId: string, worldPos: THREE.Vector3, event: PointerEvent) => {
       const otherSide = getOtherSide(muscleId);
+      // Alt/Option key overrides the toggle
+      const bothSides = event.altKey ? !selectBothSides : selectBothSides;
 
       // Workout mode: toggle target muscles instead of opening edit panel
       if (isWorkoutMode) {
@@ -176,10 +236,10 @@ export function PhysioScene() {
           const next = new Set(prev);
           if (next.has(muscleId)) {
             next.delete(muscleId);
-            next.delete(otherSide);
+            if (bothSides) next.delete(otherSide);
           } else {
             next.add(muscleId);
-            next.add(otherSide);
+            if (bothSides) next.add(otherSide);
           }
           return next;
         });
@@ -191,14 +251,14 @@ export function PhysioScene() {
         const next = new Set(prev);
         if (next.has(muscleId)) {
           next.delete(muscleId);
-          if (selectBothSides) next.delete(otherSide);
+          if (bothSides) next.delete(otherSide);
           setEditingMuscle(null);
           setEditPosition(null);
           setFocusTarget(null);
         } else {
           next.clear();
           next.add(muscleId);
-          if (selectBothSides) next.add(otherSide);
+          if (bothSides) next.add(otherSide);
           setEditingMuscle(muscleId);
           setEditPosition(worldPos.clone());
           setFocusTarget(worldPos.clone());
@@ -206,7 +266,7 @@ export function PhysioScene() {
         return next;
       });
     },
-    [selectBothSides, isWorkoutMode],
+    [isWorkoutMode, selectBothSides],
   );
 
   const handleMuscleHover = useCallback((muscleId: string | null) => {
@@ -267,7 +327,13 @@ export function PhysioScene() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
-      <Canvas>
+      <Canvas
+        onPointerMissed={() => {
+          if (!isWorkoutMode && editingMuscle) {
+            handleCloseEdit();
+          }
+        }}
+      >
         <Suspense fallback={null}>
           <PerspectiveCamera makeDefault position={[0, 1.1, 2.0]} fov={50} />
 
@@ -346,14 +412,9 @@ export function PhysioScene() {
 
       {/* Floating edit panel at projected muscle position */}
       {!isWorkoutMode && editingMuscle && editScreenPos && (
-        <div
-          className="pointer-events-auto absolute z-10"
-          style={{
-            left: editScreenPos.x,
-            top: editScreenPos.y,
-            transform: "translate(12px, -50%)",
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
+        <EditPanelPositioner
+          screenX={editScreenPos.x}
+          screenY={editScreenPos.y}
         >
           <StructureEditPanel3D
             muscleId={editingMuscle}
@@ -363,7 +424,7 @@ export function PhysioScene() {
             }
             onClose={handleCloseEdit}
           />
-        </div>
+        </EditPanelPositioner>
       )}
 
       {/* UI Overlays */}
@@ -419,6 +480,27 @@ export function PhysioScene() {
         {/* Bottom center: Unified pill bar */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
           <div className="pointer-events-auto mosaic-panel flex items-center rounded-full px-1 py-1">
+            {/* Bilateral toggle */}
+            <button
+              type="button"
+              onClick={() => setSelectBothSides((v) => !v)}
+              className={`relative flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium transition-colors ${
+                selectBothSides
+                  ? "text-white/70 hover:text-white"
+                  : "bg-gradient-to-r from-blue-500/20 to-teal-500/15 text-white"
+              }`}
+              title={
+                selectBothSides ? "Selecting both sides" : "Selecting one side"
+              }
+            >
+              {!selectBothSides && (
+                <span className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400 to-teal-400" />
+              )}
+              {selectBothSides ? "L+R" : "L/R"}
+            </button>
+
+            <div className="h-5 w-px bg-white/10" />
+
             {/* Front/Back View */}
             <button
               type="button"
