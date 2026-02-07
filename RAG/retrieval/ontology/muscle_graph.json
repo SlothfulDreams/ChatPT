@@ -1,0 +1,30 @@
+{
+  "quadriceps": {
+    "synonyms": ["quads", "quadriceps femoris"],
+    "components": ["rectus femoris", "vastus lateralis", "vastus medialis", "vastus intermedius"],
+    "region": "anterior thigh",
+    "actions": ["knee extension", "hip flexion"],
+    "antagonists": ["hamstrings"]
+  },
+  "hamstrings": {
+    "synonyms": ["hammies", "posterior thigh muscles"],
+    "components": ["biceps femoris", "semitendinosus", "semimembranosus"],
+    "region": "posterior thigh",
+    "actions": ["knee flexion", "hip extension"],
+    "antagonists": ["quadriceps"]
+  },
+  "rotator cuff": {
+    "synonyms": ["rotator cuff muscles", "RC"],
+    "components": ["supraspinatus", "infraspinatus", "teres minor", "subscapularis"],
+    "region": "shoulder",
+    "actions": ["shoulder rotation", "shoulder stabilization"],
+    "antagonists": []
+  },
+  "gluteus maximus": {
+    "synonyms": ["glute max", "glutes"],
+    "components": [],
+    "region": "hip",
+    "actions": ["hip extension", "external rotation"],
+    "antagonists": ["iliopsoas"]
+  }
+}

@@ -1,0 +1,33 @@
+# Document parsing
+docling>=2.0.0
+
+# Embeddings
+fastembed>=0.4.0
+
+# Vector store
+qdrant-client>=1.12.0
+
+# Chunking
+groq>=0.11.0
+instructor>=1.5.0
+semantic-text-splitter>=0.18.0
+pydantic>=2.0.0
+
+# Reranking
+sentence-transformers>=3.0.0
+
+# Agent
+langchain>=0.3.0
+# langchain-anthropic>=0.3.0
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# API
+fastapi>=0.115.0
+uvicorn>=0.32.0
+python-multipart>=0.0.12
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
