@@ -219,32 +219,22 @@ export function ChatPanel({
     <div className="pointer-events-auto mosaic-panel animate-slide-in-right flex min-h-0 w-96 flex-1 flex-col text-white">
       {/* Header */}
       <div
-        className="relative flex shrink-0 items-center gap-1.5 border-b border-white/10 px-3 py-2.5"
+        className="relative shrink-0 border-b border-white/10"
         style={{ zIndex: 10 }}
+        ref={dropdownRef}
       >
-        {/* New conversation button */}
-        <button
-          type="button"
-          onClick={handleNewConversation}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-sm text-blue-400/70 transition-colors hover:bg-blue-500/20 hover:text-blue-300"
-          title="New conversation"
-          aria-label="New conversation"
-        >
-          +
-        </button>
-
-        {/* Title dropdown */}
-        {isEditingTitle ? (
-          <input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={handleFinishRename}
-            onKeyDown={handleTitleKeyDown}
-            className="min-w-0 flex-1 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white outline-none focus:ring-1 focus:ring-white/20"
-          />
-        ) : (
-          <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+        <div className="flex items-center gap-1.5 px-3 py-2.5">
+          {/* Title / dropdown trigger */}
+          {isEditingTitle ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={handleFinishRename}
+              onKeyDown={handleTitleKeyDown}
+              className="min-w-0 flex-1 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white outline-none focus:ring-1 focus:ring-white/20"
+            />
+          ) : (
             <button
               type="button"
               onClick={() => setIsDropdownOpen((v) => !v)}
@@ -253,81 +243,97 @@ export function ChatPanel({
                 setIsDropdownOpen(false);
                 handleStartRename();
               }}
-              className="flex w-full items-center gap-1.5 text-xs font-semibold text-white hover:text-white/70"
+              className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-white hover:text-white/70"
               title="Double-click to rename"
             >
               <span className="truncate">
                 {conversationTitle ?? "New Conversation"}
               </span>
-              <span className="shrink-0 text-[9px] text-white/30">
-                {isDropdownOpen ? "▲" : "▼"}
-              </span>
+              <svg
+                className={`h-3 w-3 shrink-0 text-white/30 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
             </button>
+          )}
 
-            {isDropdownOpen &&
-              (() => {
-                const pastConversations = conversations.filter(
-                  (c) => c._id !== activeConversationId,
-                );
-                return (
-                  <div className="mosaic-panel absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden">
-                    <div className="max-h-64 overflow-y-auto">
-                      {pastConversations.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-white/50">
-                          No past conversations
-                        </p>
-                      )}
-                      {pastConversations.map((conv) => (
-                        <div
-                          key={conv._id}
-                          className="group flex items-center border-b border-white/[0.04] text-white/60 transition-colors last:border-b-0 hover:bg-white/5 hover:text-white"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => {
-                              switchConversation(conv._id);
-                              setIsDropdownOpen(false);
-                            }}
-                            className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-2.5 text-left"
-                          >
-                            <span className="truncate text-xs font-medium">
-                              {conv.title ?? "Untitled"}
-                            </span>
-                            <span className="text-[10px] text-white/40">
-                              {new Date(conv.updatedAt).toLocaleDateString(
-                                undefined,
-                                { month: "short", day: "numeric" },
-                              )}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) =>
-                              handleDeleteConversation(e, conv._id)
-                            }
-                            className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/0 transition-all hover:bg-white/10 hover:text-red-400 group-hover:text-white/20"
-                            title="Delete conversation"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+          {/* New conversation */}
+          <button
+            type="button"
+            onClick={handleNewConversation}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+            title="New conversation"
+            aria-label="New conversation"
+          >
+            +
+          </button>
+
+          {/* Close panel */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Close panel"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Dropdown */}
+        {isDropdownOpen && (
+          <div className="absolute inset-x-0 top-full z-50 mx-2 mt-1 overflow-hidden rounded-lg border border-white/10 bg-[#0a0e17]/95 shadow-xl shadow-black/40 backdrop-blur-xl">
+            <div className="max-h-64 overflow-y-auto">
+              {conversations.length <= 1 && (
+                <p className="px-3 py-3 text-center text-[11px] text-white/40">
+                  No other conversations
+                </p>
+              )}
+              {conversations
+                .filter((c) => c._id !== activeConversationId)
+                .map((conv) => (
+                  <div
+                    key={conv._id}
+                    className="group flex items-center border-b border-white/[0.04] last:border-b-0"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        switchConversation(conv._id);
+                        setIsDropdownOpen(false);
+                      }}
+                      className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/5"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-white/70 group-hover:text-white">
+                        {conv.title ?? "Untitled"}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-white/30">
+                        {new Date(conv.updatedAt).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric" },
+                        )}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteConversation(e, conv._id)}
+                      className="mr-2 flex h-5 w-5 shrink-0 items-center justify-center rounded text-white/0 transition-all hover:bg-white/10 hover:text-red-400 group-hover:text-white/20"
+                      title="Delete conversation"
+                    >
+                      ×
+                    </button>
                   </div>
-                );
-              })()}
+                ))}
+            </div>
           </div>
         )}
-
-        {/* Close panel button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
-          aria-label="Close panel"
-        >
-          ×
-        </button>
       </div>
 
       {/* Focus context bar */}
