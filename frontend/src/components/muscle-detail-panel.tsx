@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import { formatMuscleName, getSideLabel } from "@/lib/muscle-utils";
 import type { MuscleState } from "@/types/muscle";
@@ -42,18 +42,47 @@ const CONDITION_BADGE_COLORS: Record<string, string> = {
 
 function DiagnosisTimeline({ muscleDbId }: { muscleDbId: Id<"muscles"> }) {
   const history = useQuery(api.muscles.getHistory, { muscleId: muscleDbId });
-  const [showAll, setShowAll] = useState(false);
+  const clearHistory = useMutation(api.muscles.clearHistory);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   if (!history || history.length === 0) return null;
 
-  const visible = showAll ? history : history.slice(0, 10);
-  const hasMore = !showAll && history.length > 10;
-
   return (
     <div className="mt-2 border-t border-white/10 pt-2">
-      <span className="text-white/40 text-xs">Diagnosis History</span>
-      <div className="mt-1.5 space-y-2">
-        {visible.map((entry) => (
+      <div className="flex items-center justify-between">
+        <span className="text-white/40 text-xs">Diagnosis History</span>
+        {confirmClear ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                clearHistory({ muscleId: muscleDbId });
+                setConfirmClear(false);
+              }}
+              className="text-[10px] text-red-400 hover:text-red-300 transition-colors"
+            >
+              Confirm
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmClear(false)}
+              className="text-[10px] text-white/30 hover:text-white/50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmClear(true)}
+            className="text-[10px] text-white/25 hover:text-white/50 transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="mt-1.5 max-h-48 space-y-2 overflow-y-auto pr-1">
+        {history.map((entry) => (
           <div
             key={entry._id}
             className="rounded-md bg-white/[0.03] px-2 py-1.5"
@@ -85,15 +114,6 @@ function DiagnosisTimeline({ muscleDbId }: { muscleDbId: Id<"muscles"> }) {
           </div>
         ))}
       </div>
-      {hasMore && (
-        <button
-          type="button"
-          onClick={() => setShowAll(true)}
-          className="mt-1.5 w-full text-center text-[10px] text-white/30 hover:text-white/50 transition-colors"
-        >
-          Show {history.length - 10} more
-        </button>
-      )}
     </div>
   );
 }

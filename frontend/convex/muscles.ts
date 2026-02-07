@@ -133,6 +133,21 @@ export const getHistory = query({
   },
 });
 
+export const clearHistory = mutation({
+  args: { muscleId: v.id("muscles") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const entries = await ctx.db
+      .query("muscleHistory")
+      .withIndex("by_muscle", (q) => q.eq("muscleId", args.muscleId))
+      .collect();
+    for (const entry of entries) {
+      await ctx.db.delete(entry._id);
+    }
+    return null;
+  },
+});
+
 export const applyWorkoutEffect = mutation({
   args: {
     bodyId: v.id("bodies"),

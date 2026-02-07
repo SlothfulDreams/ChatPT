@@ -320,9 +320,9 @@ export function MuscleFeelingsPanel({
               : isDirty
                 ? {
                     background: selectedFeeling
-                      ? `linear-gradient(135deg, ${selectedFeeling.accent}44, ${selectedFeeling.accent}22)`
-                      : "rgba(59,130,246,0.2)",
-                    color: selectedFeeling ? selectedFeeling.accent : "#60a5fa",
+                      ? `linear-gradient(135deg, ${selectedFeeling.accent}99, ${selectedFeeling.accent}66)`
+                      : "rgba(59,130,246,0.5)",
+                    color: "#fff",
                   }
                 : {
                     backgroundColor: "rgba(255,255,255,0.04)",
@@ -335,7 +335,7 @@ export function MuscleFeelingsPanel({
         <button
           type="button"
           onClick={handleClear}
-          className="rounded bg-white/[0.06] px-3 py-1.5 text-xs text-white/40 transition-colors hover:bg-white/10 hover:text-white/60"
+          className="rounded bg-white/20 px-3 py-1.5 text-xs text-white/70 transition-colors hover:bg-white/30 hover:text-white"
         >
           Clear
         </button>
