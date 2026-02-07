@@ -200,6 +200,7 @@ export function PhysioScene() {
   >(new Set());
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
 
   // Auto-open chat when muscles are selected (unless in workout mode)
   useEffect(() => {
@@ -246,25 +247,45 @@ export function PhysioScene() {
         return;
       }
 
-      // Normal mode: bilateral selection + edit panel
-      setSelectedMuscles((prev) => {
-        const next = new Set(prev);
-        if (next.has(muscleId)) {
-          next.delete(muscleId);
-          if (bothSides) next.delete(otherSide);
-          setEditingMuscle(null);
-          setEditPosition(null);
-          setFocusTarget(null);
-        } else {
-          next.clear();
-          next.add(muscleId);
-          if (bothSides) next.add(otherSide);
-          setEditingMuscle(muscleId);
-          setEditPosition(worldPos.clone());
-          setFocusTarget(worldPos.clone());
-        }
-        return next;
-      });
+      // Cmd (Mac) / Ctrl (Win) for multi-select
+      const isMultiSelect = event.metaKey || event.ctrlKey;
+
+      if (isMultiSelect) {
+        // Multi-select: toggle without clearing, no edit panel
+        setSelectedMuscles((prev) => {
+          const next = new Set(prev);
+          if (next.has(muscleId)) {
+            next.delete(muscleId);
+            if (bothSides) next.delete(otherSide);
+          } else {
+            next.add(muscleId);
+            if (bothSides) next.add(otherSide);
+          }
+          return next;
+        });
+        setEditingMuscle(null);
+        setEditPosition(null);
+      } else {
+        // Normal mode: bilateral selection + edit panel
+        setSelectedMuscles((prev) => {
+          const next = new Set(prev);
+          if (next.has(muscleId)) {
+            next.delete(muscleId);
+            if (bothSides) next.delete(otherSide);
+            setEditingMuscle(null);
+            setEditPosition(null);
+            setFocusTarget(null);
+          } else {
+            next.clear();
+            next.add(muscleId);
+            if (bothSides) next.add(otherSide);
+            setEditingMuscle(muscleId);
+            setEditPosition(worldPos.clone());
+            setFocusTarget(worldPos.clone());
+          }
+          return next;
+        });
+      }
     },
     [isWorkoutMode, selectBothSides],
   );
@@ -328,9 +349,20 @@ export function PhysioScene() {
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
       <Canvas
-        onPointerMissed={() => {
+        onPointerDown={(e) => {
+          pointerDownPos.current = { x: e.clientX, y: e.clientY };
+        }}
+        onPointerMissed={(event) => {
           if (!isWorkoutMode && editingMuscle) {
-            handleCloseEdit();
+            // Only close on a true click, not after a drag/orbit
+            const down = pointerDownPos.current;
+            if (down) {
+              const dx = event.clientX - down.x;
+              const dy = event.clientY - down.y;
+              if (dx * dx + dy * dy < 25) {
+                handleCloseEdit();
+              }
+            }
           }
         }}
       >
@@ -391,7 +423,7 @@ export function PhysioScene() {
           <OrbitControls
             ref={controlsRef}
             target={[0, 1.0, 0]}
-            enabled={!editingMuscle || isWorkoutMode}
+            enabled
             enableZoom
             enablePan
             minDistance={0.5}

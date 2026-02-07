@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatPT - AI Physical Therapy Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-dark: #0a0a0f;
+    --bg-card: #12121a;
+    --accent: #22d3ee;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --red: #f87171;
+    --orange: #fb923c;
+    --green: #4ade80;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  .deck {
+    width: 100%; height: 100%;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  .slide.active {
+    display: flex;
+    opacity: 1;
+  }
+
+  /* Navigation */
+  .nav {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+    background: rgba(18,18,26,0.85);
+    backdrop-filter: blur(12px);
+    padding: 10px 24px;
+    border-radius: 50px;
+    border: 1px solid rgba(34,211,238,0.15);
+  }
+
+  .nav button {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .nav button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(34,211,238,0.08);
+  }
+
+  .nav .counter {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .dot-track {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+
+  .dot.active {
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(34,211,238,0.5);
+    transform: scale(1.3);
+  }
+
+  /* ===== Slide Styles ===== */
+
+  /* Title Slide */
+  .slide-title {
+    background: radial-gradient(ellipse at 30% 20%, rgba(34,211,238,0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(167,139,250,0.06) 0%, transparent 50%),
+                var(--bg-dark);
+    text-align: center;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(34,211,238,0.08);
+    border: 1px solid rgba(34,211,238,0.2);
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 32px;
+    letter-spacing: 0.05em;
+  }
+
+  .logo-badge .pulse {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .title-main {
+    font-size: 86px;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .title-main .chat { color: var(--text); }
+  .title-main .pt {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .title-sub {
+    font-size: 26px;
+    font-weight: 300;
+    color: var(--text-dim);
+    margin-bottom: 48px;
+    letter-spacing: 0.02em;
+  }
+
+  .title-tags {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .tag {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  /* Section Header */
+  .section-num {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    max-width: 900px;
+    text-align: center;
+  }
+
+  .section-desc {
+    font-size: 20px;
+    color: var(--text-dim);
+    max-width: 700px;
+    text-align: center;
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  /* Grid Layouts */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 40px;
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 40px;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 28px;
+    transition: all 0.3s;
+  }
+
+  .card:hover {
+    border-color: rgba(34,211,238,0.2);
+    transform: translateY(-2px);
+  }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+
+  .card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    width: 100%;
+    max-width: 1100px;
+    align-items: start;
+  }
+
+  .col-left { text-align: left; }
+
+  .col-left .section-title {
+    text-align: left;
+    font-size: 44px;
+  }
+
+  .col-left .section-desc {
+    text-align: left;
+  }
+
+  /* Tech Stack */
+  .tech-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .tech-row:last-child { border-bottom: none; }
+
+  .tech-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    width: 100px;
+    flex-shrink: 0;
+  }
+
+  .tech-val {
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* Architecture Diagram */
+  .arch-box {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 18px 24px;
+    text-align: center;
+    position: relative;
+  }
+
+  .arch-box h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .arch-box p {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 1000px;
+    margin-top: 32px;
+  }
+
+  .arch-layer {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 8px 0;
+  }
+
+  .arch-layer-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+  }
+
+  .arch-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+  }
+
+  .arch-chip {
+    background: rgba(34,211,238,0.06);
+    border: 1px solid rgba(34,211,238,0.15);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .arch-chip.purple {
+    background: rgba(167,139,250,0.06);
+    border-color: rgba(167,139,250,0.15);
+  }
+
+  .arch-chip.green {
+    background: rgba(52,211,153,0.06);
+    border-color: rgba(52,211,153,0.15);
+  }
+
+  .arch-chip.orange {
+    background: rgba(251,146,60,0.06);
+    border-color: rgba(251,146,60,0.15);
+  }
+
+  .arch-arrow {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 20px;
+    padding: 4px 0;
+  }
+
+  /* Feature highlight */
+  .feature-number {
+    font-size: 64px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .feature-unit {
+    font-size: 16px;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 60px;
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .stat-item .stat-num {
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-item .stat-label {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 6px;
+  }
+
+  /* Pipeline Flow */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-top: 36px;
+    max-width: 1100px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pipe-step {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px 22px;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .pipe-step h4 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .pipe-step p {
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .pipe-arrow {
+    font-size: 20px;
+    color: var(--accent);
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* Bullet list */
+  .bullet-list {
+    list-style: none;
+    text-align: left;
+    max-width: 700px;
+  }
+
+  .bullet-list li {
+    padding: 10px 0;
+    font-size: 17px;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    line-height: 1.5;
+  }
+
+  .bullet-list li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+
+  .bullet-list li span {
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Schema Table */
+  .schema-table {
+    width: 100%;
+    max-width: 900px;
+    margin-top: 30px;
+    border-collapse: collapse;
+  }
+
+  .schema-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .schema-table td {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .schema-table td:first-child {
+    font-weight: 600;
+    color: var(--accent3);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+  }
+
+  .schema-table td:last-child {
+    color: var(--text-dim);
+  }
+
+  /* Condition colors demo */
+  .condition-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 0;
+  }
+
+  .condition-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .condition-name {
+    font-size: 15px;
+    font-weight: 600;
+    width: 110px;
+  }
+
+  .condition-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  /* Final slide */
+  .final-cta {
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-top: 24px;
+    letter-spacing: 0.02em;
+  }
+
+  .team-row {
+    display: flex;
+    gap: 40px;
+    margin-top: 40px;
+  }
+
+  .team-member {
+    text-align: center;
+  }
+
+  .team-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 auto 8px;
+  }
+
+  /* Fullscreen background patterns */
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .slide-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Keyboard hint */
+  .key-hint {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    z-index: 100;
+  }
+
+  .key-hint kbd {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 11px;
+  }
+
+  /* Muscle condition legend */
+  .legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 40px;
+    margin-top: 20px;
+  }
+
+  /* Tools list */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .tool-chip {
+    background: rgba(167,139,250,0.06);
+    border: 1px solid rgba(167,139,250,0.15);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+
+  .tool-chip code {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .tool-chip span {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+
+<div class="key-hint"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate</div>
+
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide slide-title active" data-slide="0">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="logo-badge"><span class="pulse"></span> Hackathon 2025</div>
+      <div class="title-main"><span class="chat">Chat</span><span class="pt">PT</span></div>
+      <div class="title-sub">Your AI-Powered Physical Therapy Assistant</div>
+      <div class="title-tags">
+        <span class="tag">3D Body Visualization</span>
+        <span class="tag">AI Chat with Tool Calling</span>
+        <span class="tag">RAG Clinical Knowledge</span>
+        <span class="tag">Personalized Workouts</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: The Problem -->
+  <div class="slide" data-slide="1">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">01 &mdash; The Problem</div>
+      <div class="section-title">Physical Therapy is Broken</div>
+      <div class="section-desc">Patients struggle with generic exercise plans, lack of real-time feedback, and no way to visualize their recovery progress.</div>
+      <div class="grid-3">
+        <div class="card">
+          <span class="card-icon">&#x1f4b8;</span>
+          <h3>Expensive Access</h3>
+          <p>PT sessions cost $75-$350 each, and most insurance limits coverage to a few visits per year.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f4cb;</span>
+          <h3>Generic Programs</h3>
+          <p>Cookie-cutter exercise sheets don't adapt to a patient's specific pain levels, conditions, or progress.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f937;</span>
+          <h3>No Visibility</h3>
+          <p>Patients can't see which muscles are affected or understand the clinical reasoning behind their treatment.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: Our Solution -->
+  <div class="slide" data-slide="2">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">02 &mdash; Our Solution</div>
+      <div class="section-title">An AI Physiotherapist in Your Browser</div>
+      <div class="section-desc">ChatPT combines an interactive 3D body model, an AI chat that understands clinical PT, and evidence-based workout generation &mdash; all in one platform.</div>
+      <div class="grid-2">
+        <div class="card">
+          <span class="card-icon">&#x1f9d1;&#x200d;&#x2695;&#xfe0f;</span>
+          <h3>AI Clinical Chat</h3>
+          <p>Describe your symptoms in plain language. The AI assesses your condition, updates your body model in real-time, and explains the clinical reasoning.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f9ec;</span>
+          <h3>3D Body Visualization</h3>
+          <p>100+ individually selectable muscle meshes, color-coded by condition. See exactly which structures are affected at a glance.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f4da;</span>
+          <h3>RAG Knowledge Base</h3>
+          <p>Evidence-based retrieval from clinical PT literature. Every recommendation is grounded in real research, not hallucination.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f3cb;&#xfe0f;</span>
+          <h3>Smart Workout Generation</h3>
+          <p>AI-generated exercise plans that respect your injuries, adapt to your equipment, and include DALL-E generated exercise images.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Live Demo / Feature Overview -->
+  <div class="slide" data-slide="3">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">03 &mdash; Key Features</div>
+      <div class="section-title">How It Works</div>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-num">100+</div>
+          <div class="stat-label">Selectable Muscles</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">17</div>
+          <div class="stat-label">Muscle Groups</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">9</div>
+          <div class="stat-label">Condition States</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num">6</div>
+          <div class="stat-label">RAG Tool Functions</div>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top: 32px;">
+        <div class="card">
+          <h3>Muscle Conditions</h3>
+          <div class="legend-grid">
+            <div class="condition-row"><div class="condition-dot" style="background: #16a34a"></div><span class="condition-name">Healthy</span></div>
+            <div class="condition-row"><div class="condition-dot" style="background: #ea580c"></div><span class="condition-name">Tight</span></div>
+            <div class="condition-row"><div class="condition-dot" style="background: #b91c1c"></div><span class="condition-name">Torn</span></div>
+            <div class="condition-row"><div class="condition-dot" style="background: #f59e0b"></div><span class="condition-name">Inflamed</span></div>
+            <div class="condition-row"><div class="condition-dot" style="background: #ca8a04"></div><span class="condition-name">Strained</span></div>
+            <div class="condition-row"><div class="condition-dot" style="background: #a3a3a3"></div><span class="condition-name">Fatigued</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Per-Muscle Tracking</h3>
+          <ul class="bullet-list" style="font-size: 14px;">
+            <li>Pain level (0 &ndash; 10 scale)</li>
+            <li>Strength (0 &ndash; 100%)</li>
+            <li>Range of motion (0 &ndash; 100%)</li>
+            <li>Clinical condition state</li>
+            <li>AI-generated summary</li>
+            <li>Full change history</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Camera Controls</h3>
+          <ul class="bullet-list" style="font-size: 14px;">
+            <li>Orbit, zoom, pan</li>
+            <li>Front / Back presets</li>
+            <li>Left / Right side views</li>
+            <li>Isometric view</li>
+            <li>Toggle skeleton overlay</li>
+            <li>Adjustable muscle opacity</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: AI Chat Deep Dive -->
+  <div class="slide" data-slide="4">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">04 &mdash; AI Chat</div>
+      <div class="section-title">Chat That Takes Action</div>
+      <div class="section-desc" style="margin-bottom: 36px;">The LLM doesn't just respond &mdash; it uses tool calling to update the 3D body model in real time as you describe symptoms.</div>
+      <div class="two-col">
+        <div>
+          <h3 style="font-size: 20px; margin-bottom: 20px; color: var(--accent);">AI Tool Functions</h3>
+          <div class="tools-grid">
+            <div class="tool-chip">
+              <code>update_muscle()</code>
+              <span>Sets condition, pain, strength, mobility, and clinical summary for any muscle</span>
+            </div>
+            <div class="tool-chip">
+              <code>add_knot()</code>
+              <span>Records trigger points, adhesions, or spasms with severity</span>
+            </div>
+            <div class="tool-chip">
+              <code>create_assessment()</code>
+              <span>Generates clinical assessment with affected structures</span>
+            </div>
+            <div class="tool-chip">
+              <code>search_knowledge_base()</code>
+              <span>Queries RAG for evidence-based PT protocols</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h3 style="font-size: 20px; margin-bottom: 20px; color: var(--accent);">User Flow</h3>
+          <ul class="bullet-list">
+            <li><strong>"My left shoulder hurts when I raise my arm"</strong></li>
+            <li><span>AI queries RAG for shoulder pathology context</span></li>
+            <li><span>AI calls <code style="color:var(--accent2)">update_muscle()</code> on relevant rotator cuff muscles</span></li>
+            <li><span>3D model updates in real time &mdash; affected muscles turn orange/red</span></li>
+            <li><span>AI responds with clinical reasoning and next steps</span></li>
+            <li><span>AI generates an evidence-based rehab workout</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: RAG Pipeline -->
+  <div class="slide" data-slide="5">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">05 &mdash; RAG Pipeline</div>
+      <div class="section-title">Evidence-Based Intelligence</div>
+      <div class="section-desc">Clinical knowledge is ingested, chunked semantically, embedded, and retrieved at query time to ground every AI response in real PT literature.</div>
+      <div class="pipeline">
+        <div class="pipe-step">
+          <h4>Document Upload</h4>
+          <p>PDF, DOCX, HTML, Markdown</p>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <h4>Agentic Chunking</h4>
+          <p>Groq + Llama 3.1</p>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <h4>Embedding</h4>
+          <p>Nomic v1.5 (768-dim)</p>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <h4>Vector Store</h4>
+          <p>Qdrant Cloud</p>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <h4>Retrieval + Rerank</h4>
+          <p>Cross-encoder scoring</p>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <h4>LLM Response</h4>
+          <p>Dedalus SDK streaming</p>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-top: 36px;">
+        <div class="card">
+          <h3>Smart Filters</h3>
+          <p>Retrieval can be filtered by muscle group, condition type, content type (rehab protocol, exercise technique, pathology, anatomy, assessment), and specific exercises.</p>
+        </div>
+        <div class="card">
+          <h3>Patient Context</h3>
+          <p>The AI pulls the patient's current muscle states from Convex and combines them with RAG results for truly personalized, context-aware responses.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Workout Generation -->
+  <div class="slide" data-slide="6">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">06 &mdash; Workout Generation</div>
+      <div class="section-title">AI-Personalized Exercise Plans</div>
+      <div class="section-desc">Workout plans are synthesized from RAG clinical evidence and patient state. The AI avoids exercises for torn/strained muscles and adapts to available equipment.</div>
+      <div class="two-col" style="margin-top: 36px;">
+        <div>
+          <h3 style="color: var(--accent); margin-bottom: 16px;">Generation Pipeline</h3>
+          <ul class="bullet-list">
+            <li><strong>Patient Context:</strong> <span>Current muscle states, pain levels, conditions from Convex</span></li>
+            <li><strong>RAG Evidence:</strong> <span>Retrieves relevant rehab protocols and exercise techniques</span></li>
+            <li><strong>User Preferences:</strong> <span>Goals, duration, available equipment, difficulty level</span></li>
+            <li><strong>LangChain Synthesis:</strong> <span>Prompt + LLM + JSON Parser &rarr; structured workout plan</span></li>
+            <li><strong>Exercise Images:</strong> <span>DALL-E 3 generates visual demonstrations for each exercise</span></li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color: var(--accent); margin-bottom: 16px;">Exercise Output</h3>
+          <div class="card" style="font-family: 'SF Mono', monospace; font-size: 13px; line-height: 1.7; color: var(--text-dim);">
+            <span style="color: var(--accent2);">name:</span> "Band Pull-Apart"<br>
+            <span style="color: var(--accent2);">sets:</span> 3<br>
+            <span style="color: var(--accent2);">reps:</span> 15<br>
+            <span style="color: var(--accent2);">weight:</span> "Light band"<br>
+            <span style="color: var(--accent2);">target:</span> ["rear_deltoid", "rhomboids"]<br>
+            <span style="color: var(--accent2);">notes:</span> "Focus on scapular retraction. Stop if shoulder pain exceeds 3/10."<br>
+            <span style="color: var(--accent2);">reasoning:</span> "Strengthens posterior chain to correct anterior tilt..."
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Architecture -->
+  <div class="slide" data-slide="7">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">07 &mdash; Architecture</div>
+      <div class="section-title">Full-Stack System Design</div>
+      <div class="arch-grid">
+        <div class="arch-layer">
+          <div class="arch-layer-label">Frontend</div>
+          <div class="arch-row">
+            <div class="arch-chip">Next.js 16 + React 19</div>
+            <div class="arch-chip">React Three Fiber</div>
+            <div class="arch-chip">Tailwind v4</div>
+            <div class="arch-chip">Clerk Auth</div>
+          </div>
+        </div>
+        <div class="arch-arrow">&darr; &nbsp; Real-time subscriptions &nbsp; &darr;</div>
+        <div class="arch-layer">
+          <div class="arch-layer-label">Database</div>
+          <div class="arch-row">
+            <div class="arch-chip green">Convex (17 tables)</div>
+            <div class="arch-chip green">Real-time Sync</div>
+            <div class="arch-chip green">Row-Level Auth</div>
+          </div>
+        </div>
+        <div class="arch-arrow">&darr; &nbsp; REST API &nbsp; &darr;</div>
+        <div class="arch-layer">
+          <div class="arch-layer-label">Backend</div>
+          <div class="arch-row">
+            <div class="arch-chip purple">Python FastAPI</div>
+            <div class="arch-chip purple">LangChain</div>
+            <div class="arch-chip purple">Dedalus SDK</div>
+          </div>
+        </div>
+        <div class="arch-arrow">&darr; &nbsp; Vector Search + Embeddings &nbsp; &darr;</div>
+        <div class="arch-layer">
+          <div class="arch-layer-label">AI &amp; Data</div>
+          <div class="arch-row">
+            <div class="arch-chip orange">Qdrant Vector DB</div>
+            <div class="arch-chip orange">Groq (Llama 3.1)</div>
+            <div class="arch-chip orange">DALL-E 3</div>
+            <div class="arch-chip orange">Nomic Embeddings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Data Model -->
+  <div class="slide" data-slide="8">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">08 &mdash; Data Model</div>
+      <div class="section-title">Clinical-Grade Schema</div>
+      <div class="section-desc">17 Convex tables model a complete patient musculoskeletal profile with full audit history.</div>
+      <table class="schema-table">
+        <thead>
+          <tr><th>Table</th><th>Purpose</th><th>Key Fields</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>users</td><td>Clerk-synced accounts</td><td>clerkId, name, email</td></tr>
+          <tr><td>bodies</td><td>Body measurements</td><td>sex, weight, height, birthDate</td></tr>
+          <tr><td>muscles</td><td>100+ muscles per body</td><td>meshId, condition, pain, strength, mobility</td></tr>
+          <tr><td>knots</td><td>Trigger points / adhesions</td><td>3D position, severity, type</td></tr>
+          <tr><td>muscleHistory</td><td>Change audit trail</td><td>previous/new values, event type</td></tr>
+          <tr><td>muscleAssessments</td><td>Clinical evidence chain</td><td>test name, value, confidence, reasoning</td></tr>
+          <tr><td>conversations</td><td>Chat sessions</td><td>One active per user</td></tr>
+          <tr><td>workoutPlans</td><td>Exercise routines</td><td>Name, active flag, target meshIds</td></tr>
+          <tr><td>strengthNorms</td><td>Reference data</td><td>Norms by age/sex for comparison</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: What Makes Us Different -->
+  <div class="slide" data-slide="9">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">09 &mdash; Differentiators</div>
+      <div class="section-title">Why ChatPT Stands Out</div>
+      <div class="grid-2" style="margin-top: 36px;">
+        <div class="card">
+          <span class="card-icon">&#x1f3af;</span>
+          <h3>Agentic AI, Not Just Chat</h3>
+          <p>The LLM autonomously calls tools to update the body model as you describe symptoms. It's not a chatbot &mdash; it's an agent that takes clinical actions.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f52c;</span>
+          <h3>Evidence-Based RAG</h3>
+          <p>Every recommendation is retrieved from real PT literature, not hallucinated. The pipeline uses agentic chunking and cross-encoder reranking for precision.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f9d1;&#x200d;&#x1f4bb;</span>
+          <h3>Spatial Understanding</h3>
+          <p>A 3D anatomical model with 100+ meshes gives both the user and the AI a shared spatial language for muscle groups and injury locations.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f504;</span>
+          <h3>Closed-Loop Feedback</h3>
+          <p>Chat updates the model, model informs workouts, workouts track progress, progress feeds back to chat. A continuous improvement cycle.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Future / Thank You -->
+  <div class="slide" data-slide="10">
+    <div class="bg-grid"></div>
+    <div class="slide-content">
+      <div class="section-num">10 &mdash; What's Next</div>
+      <div class="section-title">Future Roadmap</div>
+      <div class="grid-3" style="margin-top: 24px; margin-bottom: 48px;">
+        <div class="card">
+          <span class="card-icon">&#x1f4f1;</span>
+          <h3>Mobile App</h3>
+          <p>React Native companion for guided exercises with real-time pose detection feedback.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x2328;&#xfe0f;</span>
+          <h3>Wearable Integration</h3>
+          <p>Connect to smartwatches and sensors for automatic ROM measurement and pain tracking.</p>
+        </div>
+        <div class="card">
+          <span class="card-icon">&#x1f91d;</span>
+          <h3>Clinician Portal</h3>
+          <p>Dashboard for real PTs to review AI assessments, approve plans, and collaborate remotely.</p>
+        </div>
+      </div>
+      <div style="text-align: center;">
+        <div class="title-main" style="font-size: 56px; margin-bottom: 8px;">
+          <span class="chat">Chat</span><span class="pt">PT</span>
+        </div>
+        <div class="final-cta">Thank you. Questions?</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button id="prev" aria-label="Previous slide">&larr;</button>
+  <div class="dot-track" id="dots"></div>
+  <span class="counter" id="counter">1 / 11</span>
+  <button id="next" aria-label="Next slide">&rarr;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  // Build dots
+  const dotsEl = document.getElementById('dots');
+  for (let i = 0; i < total; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsEl.appendChild(d);
+  }
+
+  function goTo(n) {
+    slides[current].classList.remove('active');
+    dotsEl.children[current].classList.remove('active');
+    current = (n + total) % total;
+    slides[current].classList.add('active');
+    dotsEl.children[current].classList.add('active');
+    document.getElementById('counter').textContent = `${current + 1} / ${total}`;
+  }
+
+  document.getElementById('prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goTo(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goTo(current - 1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End') goTo(total - 1);
+  });
+</script>
+
+</body>
+</html>
