@@ -53,44 +53,79 @@ interface FeelingDef {
   affectsMobility?: boolean;
 }
 
-const FEELINGS: FeelingDef[] = [
-  {
+/**
+ * Exhaustive condition display map -- every MuscleCondition must have an entry.
+ * `selectable` = shown in the "How does it feel?" grid.
+ * Non-selectable conditions (torn, recovering, healthy) appear as status badges.
+ */
+interface ConditionDisplay {
+  label: string;
+  accent: string;
+  description: string;
+  selectable: boolean;
+  affectsMobility?: boolean;
+}
+
+const CONDITION_DISPLAY: Record<MuscleCondition, ConditionDisplay> = {
+  healthy: {
+    label: "Healthy",
+    accent: "#22c55e",
+    description: "No issues",
+    selectable: false,
+  },
+  fatigued: {
     label: "Soreness",
-    condition: "fatigued",
     accent: "#a855f7",
     description: "Dull ache",
+    selectable: true,
   },
-  {
+  strained: {
     label: "Sharp Pain",
-    condition: "strained",
     accent: "#ef4444",
     description: "Acute, sudden",
+    selectable: true,
   },
-  {
+  tight: {
     label: "Stiffness",
-    condition: "tight",
     accent: "#f97316",
     description: "Restricted movement",
+    selectable: true,
     affectsMobility: true,
   },
-  {
+  knotted: {
     label: "Numbness",
-    condition: "knotted",
     accent: "#818cf8",
     description: "Loss of sensation",
+    selectable: true,
   },
-  {
+  inflamed: {
     label: "Burning",
-    condition: "inflamed",
     accent: "#f43f5e",
     description: "Hot, irritated",
+    selectable: true,
   },
-  {
+  weak: {
     label: "Weakness",
-    condition: "weak",
     accent: "#60a5fa",
     description: "Lack of strength",
+    selectable: true,
   },
+  torn: {
+    label: "Torn",
+    accent: "#b91c1c",
+    description: "Severe muscle tear",
+    selectable: true,
+  },
+  recovering: {
+    label: "Recovering",
+    accent: "#38bdf8",
+    description: "Healing in progress",
+    selectable: true,
+  },
+};
+
+/** Additional user-selectable feelings that map to existing conditions (aliases) */
+const EXTRA_FEELINGS: FeelingDef[] = [
   {
     label: "Cramping",
     condition: "tight",
@@ -110,32 +145,53 @@ const FEELINGS: FeelingDef[] = [
     accent: "#fb7185",
     description: "Painful to touch",
   },
-  {
-    label: "Torn",
-    condition: "torn",
-    accent: "#b91c1c",
-    description: "Severe muscle tear",
-  },
-  {
-    label: "Recovering",
-    condition: "recovering",
-    accent: "#38bdf8",
-    description: "Healing in progress",
-  },
+];
+
+/** All selectable feelings for the grid: primary conditions + aliases */
+const FEELINGS: FeelingDef[] = [
+  ...Object.entries(CONDITION_DISPLAY)
+    .filter(([_, d]) => d.selectable)
+    .map(
+      ([condition, d]): FeelingDef => ({
+        label: d.label,
+        condition: condition as MuscleCondition,
+        accent: d.accent,
+        description: d.description,
+        affectsMobility: d.affectsMobility,
+      }),
+    ),
+  ...EXTRA_FEELINGS,
 ];
 
 function conditionToFeeling(
   condition: MuscleCondition,
 ): FeelingDef | undefined {
-  return FEELINGS.find((f) => f.condition === condition);
+  // Check user-selectable feelings first (handles aliases like Cramping -> tight)
+  const feeling = FEELINGS.find((f) => f.condition === condition);
+  if (feeling) return feeling;
+  // Fall back to the exhaustive condition display map
+  const display = CONDITION_DISPLAY[condition];
+  if (display && condition !== "healthy") {
+    return {
+      label: display.label,
+      condition,
+      accent: display.accent,
+      description: display.description,
+      affectsMobility: display.affectsMobility,
+    };
+  }
+  return undefined;
 }
 
 /** Derive the "saved" feeling + severity from the current muscleState */
 function stateToLocal(ms: MuscleState | null) {
-  if (!ms || ms.condition === "healthy") return { feeling: null, severity: 0 };
+  if (!ms || ms.condition === "healthy")
+    return { feeling: null, severity: 0, isSystemState: false };
+  const isSystemState = !CONDITION_DISPLAY[ms.condition].selectable;
   return {
     feeling: conditionToFeeling(ms.condition) ?? null,
     severity: ms.metrics.pain,
+    isSystemState,
   };
 }
 
@@ -156,7 +212,6 @@ function SeveritySlider({
 }) {
   const t = severity / 10;
   const currentColor = lerpColor(accent, t);
-  const pct = t * 100;
 
   return (
     <div className="mb-3">
@@ -172,14 +227,11 @@ function SeveritySlider({
         </span>
       </div>
       <div className="relative h-4 flex items-center">
-        {/* Track background (unfilled) */}
-        <div className="absolute inset-x-0 h-1.5 rounded-full bg-white/10" />
-        {/* Track filled */}
+        {/* Full track: green (mild) -> accent (severe) */}
         <div
-          className="absolute left-0 h-1.5 rounded-full"
+          className="absolute inset-x-0 h-1.5 rounded-full"
           style={{
-            width: `${pct}%`,
-            background: `linear-gradient(to right, #22c55e, ${currentColor})`,
+            background: `linear-gradient(to right, #22c55e, ${accent})`,
           }}
         />
         {/* Native range input (transparent, captures interaction) */}
@@ -298,7 +350,11 @@ export function MuscleFeelingsPanel({
     });
 
     // Update saved snapshot
-    savedRef.current = { feeling: selectedFeeling, severity };
+    savedRef.current = {
+      feeling: selectedFeeling,
+      severity,
+      isSystemState: false,
+    };
     setJustSaved(true);
   }, [bodyId, muscleId, upsert, selectedFeeling, severity]);
 
@@ -315,7 +371,7 @@ export function MuscleFeelingsPanel({
       mobility: 1,
     });
 
-    savedRef.current = { feeling: null, severity: 0 };
+    savedRef.current = { feeling: null, severity: 0, isSystemState: false };
     setJustSaved(false);
   }, [bodyId, muscleId, upsert]);
 
@@ -350,7 +406,7 @@ export function MuscleFeelingsPanel({
       <p className="mb-2 text-xs text-white/50">How does it feel?</p>
 
       {/* Feeling buttons grid */}
-      <div className="mb-3 grid grid-cols-3 gap-1.5">
+      <div className="mb-3 grid max-h-24 grid-cols-3 gap-1.5 overflow-y-auto">
         {FEELINGS.map((f) => {
           const isActive = selectedFeeling?.label === f.label;
           return (

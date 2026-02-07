@@ -189,6 +189,37 @@ export const applyWorkoutEffect = mutation({
   },
 });
 
+export const resetAll = mutation({
+  args: { bodyId: v.id("bodies") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const muscles = await ctx.db
+      .query("muscles")
+      .withIndex("by_body", (q) => q.eq("bodyId", args.bodyId))
+      .collect();
+    for (const m of muscles) {
+      // Delete history entries for this muscle
+      const history = await ctx.db
+        .query("muscleHistory")
+        .withIndex("by_muscle", (q) => q.eq("muscleId", m._id))
+        .collect();
+      for (const h of history) {
+        await ctx.db.delete(h._id);
+      }
+      // Delete assessments for this muscle
+      const assessments = await ctx.db
+        .query("muscleAssessments")
+        .withIndex("by_muscle", (q) => q.eq("muscleId", m._id))
+        .collect();
+      for (const a of assessments) {
+        await ctx.db.delete(a._id);
+      }
+      await ctx.db.delete(m._id);
+    }
+    return null;
+  },
+});
+
 export const update = mutation({
   args: {
     muscleId: v.id("muscles"),

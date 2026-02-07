@@ -44,6 +44,8 @@ interface SettingsModalProps {
 export function SettingsModal({ onClose }: SettingsModalProps) {
   const { body } = useBodyState();
   const updateBody = useMutation(api.body.update);
+  const resetMuscles = useMutation(api.muscles.resetAll);
+  const [resetting, setResetting] = useState(false);
 
   // Local state seeded from body
   const [sex, setSex] = useState<"male" | "female">(body?.sex ?? "male");
@@ -314,6 +316,30 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                   ))}
                 </div>
               </div>
+            </div>
+
+            {/* ---- Reset ---- */}
+            <div
+              className="mosaic-section animate-fade-up"
+              style={{ animationDelay: "180ms" }}
+            >
+              <div className="mosaic-section-label">Demo</div>
+              <p className="mb-2 text-[11px] text-white/40">
+                Wipe all muscle data and start fresh.
+              </p>
+              <button
+                type="button"
+                disabled={!body || resetting}
+                onClick={async () => {
+                  if (!body) return;
+                  setResetting(true);
+                  await resetMuscles({ bodyId: body._id });
+                  setResetting(false);
+                }}
+                className="w-full rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-40"
+              >
+                {resetting ? "Resetting..." : "Reset Body"}
+              </button>
             </div>
           </div>
         </div>
