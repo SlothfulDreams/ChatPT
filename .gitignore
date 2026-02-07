@@ -21,5 +21,8 @@ dist/
 .venv/
 venv/
 
+# Docs pipeline outputs (large, regenerable)
+docs/processed/
+
 # Claude Code
 .claude/settings.json

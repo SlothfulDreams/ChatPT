@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "ChatPT backend -- clinical chat + RAG-powered Dedalus tools"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -13,4 +13,21 @@ dependencies = [
     "pydantic>=2.12.5",
     "python-dotenv>=1.0.0",
     "uvicorn>=0.34.0",
+    # RAG / Dedalus tools
+    "docling>=2.0.0",
+    "fastembed>=0.4.0",
+    "qdrant-client>=1.12.0",
+    "groq>=0.11.0",
+    "instructor>=1.5.0",
+    "semantic-text-splitter>=0.18.0",
+    "sentence-transformers>=3.0.0",
+    "python-multipart>=0.0.12",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.15.0",
 ]

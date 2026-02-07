@@ -13,9 +13,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from dedalus_tools.api import router as rag_router
 from schemas.workout import GenerateWorkoutRequest
 
 app = FastAPI()
+app.include_router(rag_router, prefix="/rag")
 
 app.add_middleware(
     CORSMiddleware,
