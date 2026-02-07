@@ -605,8 +605,13 @@ function ActionChip({
         return `Updated ${formatMuscleName(action.params.meshId)}`;
       case "create_assessment":
         return "Assessment created";
+<<<<<<< HEAD
       case "select_muscles":
         return `Selected ${action.params.meshIds.length} muscles`;
+=======
+      case "create_workout":
+        return `Workout created: ${action.params.title}`;
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
     }
   })();
 
@@ -616,8 +621,13 @@ function ActionChip({
         return [action.params.meshId];
       case "create_assessment":
         return action.params.structuresAffected;
+<<<<<<< HEAD
       case "select_muscles":
         return action.params.meshIds;
+=======
+      case "create_workout":
+        return action.params.exercises.flatMap((e) => e.targetMeshIds ?? []);
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
       default:
         return [];
     }

@@ -29,18 +29,40 @@ export interface CreateAssessmentAction {
   };
 }
 
+<<<<<<< HEAD
 export interface SelectMusclesAction {
   name: "select_muscles";
   params: {
     meshIds: string[];
     reason: string;
+=======
+export interface CreateWorkoutAction {
+  name: "create_workout";
+  params: {
+    title: string;
+    notes?: string;
+    exercises: {
+      name: string;
+      sets?: number;
+      reps?: number;
+      durationSecs?: number;
+      weight?: number;
+      weightUnit?: string;
+      notes?: string;
+      targetMeshIds?: string[];
+    }[];
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
   };
 }
 
 export type ChatAction =
   | UpdateMuscleAction
   | CreateAssessmentAction
+<<<<<<< HEAD
   | SelectMusclesAction;
+=======
+  | CreateWorkoutAction;
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
 
 export interface AgentSubstep {
   tool: string;
@@ -113,6 +135,8 @@ export function useChat(
   const addMessage = useMutation(api.chat.addMessage);
   const markActionsApplied = useMutation(api.chat.markActionsApplied);
   const upsertMuscle = useMutation(api.muscles.upsert);
+  const createWorkoutPlan = useMutation(api.workouts.createPlan);
+  const addExercise = useMutation(api.workouts.addExercise);
   const setConversationTitle = useMutation(api.chat.setConversationTitle);
   const switchConversationMut = useMutation(api.chat.switchConversation);
   const deleteConversationMut = useMutation(api.chat.deleteConversation);
@@ -194,12 +218,49 @@ export function useChat(
             // on the message itself for now
             break;
           }
+          case "create_workout": {
+            if (!user) break;
+            const p = action.params;
+            // Create the workout plan
+            const planId = await createWorkoutPlan({
+              userId: user._id,
+              title: p.title,
+              notes: p.notes,
+              isActive: true,
+            });
+            // Add each exercise to the plan
+            for (const exercise of p.exercises) {
+              await addExercise({
+                planId,
+                name: exercise.name,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                durationSecs: exercise.durationSecs,
+                weight: exercise.weight,
+                weightUnit: exercise.weightUnit,
+                notes: exercise.notes,
+                targetMeshIds: exercise.targetMeshIds ?? [],
+              });
+            }
+            break;
+          }
         }
       }
 
       await markActionsApplied({ messageId });
     },
+<<<<<<< HEAD
     [body, muscles, upsertMuscle, markActionsApplied, onSelectMuscles],
+=======
+    [
+      body,
+      user,
+      upsertMuscle,
+      createWorkoutPlan,
+      addExercise,
+      markActionsApplied,
+    ],
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
   );
 
   // Send a message

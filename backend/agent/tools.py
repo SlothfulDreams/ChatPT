@@ -333,6 +333,7 @@ _ACTION_TOOLS: list[ToolSpec] = [
         },
     ),
     ToolSpec(
+<<<<<<< HEAD
         name="select_muscles",
         kind=ToolKind.ACTION,
         step_label="Selecting muscles on model",
@@ -348,10 +349,23 @@ _ACTION_TOOLS: list[ToolSpec] = [
                     "This REPLACES the entire current selection. "
                     "For bilateral symptoms, include BOTH sides (e.g. both 'Deltoidl' and 'Deltoidl_1'). "
                     "Only use mesh IDs from the available list."
+=======
+        name="create_workout",
+        kind=ToolKind.ACTION,
+        step_label="Creating workout plan",
+        schema={
+            "type": "function",
+            "function": {
+                "name": "create_workout",
+                "description": (
+                    "Create a workout plan with exercises. Use this when the user asks for a workout, "
+                    "training routine, or exercise program. The workout will be saved to their workout plans."
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
+<<<<<<< HEAD
                         "meshIds": {
                             "type": "array",
                             "items": {"type": "string"},
@@ -366,6 +380,62 @@ _ACTION_TOOLS: list[ToolSpec] = [
                         },
                     },
                     "required": ["meshIds", "reason"],
+=======
+                        "title": {
+                            "type": "string",
+                            "description": "Title for the workout plan (e.g., 'Upper Body Strength', 'Shoulder Rehab')",
+                        },
+                        "notes": {
+                            "type": "string",
+                            "description": "Optional notes or instructions for the overall workout plan",
+                        },
+                        "exercises": {
+                            "type": "array",
+                            "description": "List of exercises in the workout",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Exercise name (e.g., 'Bench Press', 'Shoulder External Rotation')",
+                                    },
+                                    "sets": {
+                                        "type": "number",
+                                        "description": "Number of sets",
+                                    },
+                                    "reps": {
+                                        "type": "number",
+                                        "description": "Number of reps per set (omit if using duration)",
+                                    },
+                                    "durationSecs": {
+                                        "type": "number",
+                                        "description": "Duration in seconds (for timed exercises like planks)",
+                                    },
+                                    "weight": {
+                                        "type": "number",
+                                        "description": "Weight amount (optional)",
+                                    },
+                                    "weightUnit": {
+                                        "type": "string",
+                                        "enum": ["lbs", "kg"],
+                                        "description": "Weight unit",
+                                    },
+                                    "notes": {
+                                        "type": "string",
+                                        "description": "Notes or form cues for this exercise",
+                                    },
+                                    "targetMeshIds": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "Mesh IDs of muscles targeted by this exercise",
+                                    },
+                                },
+                                "required": ["name"],
+                            },
+                        },
+                    },
+                    "required": ["title", "exercises"],
+>>>>>>> 4ac3fb3 (workout in chat goes to convex)
                 },
             },
         },
