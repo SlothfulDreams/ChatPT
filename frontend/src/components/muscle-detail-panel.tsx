@@ -1,6 +1,6 @@
 "use client";
 
-import { formatMuscleName } from "@/lib/muscle-utils";
+import { formatMuscleName, getSideLabel } from "@/lib/muscle-utils";
 import type { MuscleState } from "@/types/muscle";
 import { getMuscleDepth } from "@/types/muscle-depth";
 import { getMuscleGroup, MUSCLE_GROUP_LABELS } from "@/types/muscle-groups";
@@ -18,13 +18,13 @@ export function MuscleDetailPanel({
   const depth = getMuscleDepth(muscleId);
   const displayName = formatMuscleName(muscleId);
 
-  const isRight = muscleId.endsWith("_1");
+  const side = getSideLabel(muscleId);
 
   return (
     <div className="pointer-events-auto mosaic-panel w-72 p-4 text-white">
       <h3 className="mb-1 text-sm font-semibold">
         {displayName}
-        {isRight ? " (Right)" : " (Left)"}
+        {side && ` (${side})`}
       </h3>
       <div className="mb-3 flex gap-2 text-xs text-white/50">
         {group && <span>{MUSCLE_GROUP_LABELS[group]}</span>}

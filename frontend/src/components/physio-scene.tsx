@@ -6,12 +6,19 @@ import {
   PerspectiveCamera,
   Stars,
 } from "@react-three/drei";
-import { Canvas } from "@react-three/fiber";
-import { Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useBodyState } from "@/hooks/useBodyState";
-import { createDefaultMuscleState } from "@/types/muscle";
+import { getOtherSide } from "@/lib/muscle-utils";
 import type { MuscleDepth } from "@/types/muscle-depth";
 import type { MuscleGroup } from "@/types/muscle-groups";
 import {
@@ -20,16 +27,37 @@ import {
 } from "@/types/rendering";
 import { CameraController } from "./camera-controller";
 import { ChatPanel } from "./chat-panel";
-import { MuscleDetailPanel } from "./muscle-detail-panel";
 import { MuscleFilter } from "./muscle-filter";
 import { MuscleModel } from "./muscle-model";
 import { SkeletonModel } from "./skeleton-model";
-import { StructureEditPanel3D } from "./structure-edit-panel-3d";
+import {
+  DEFAULT_VISUAL,
+  type MuscleVisualOverride,
+  StructureEditPanel3D,
+} from "./structure-edit-panel-3d";
 import { ViewControls } from "./view-controls";
 import { WorkoutPanel } from "./workout-panel";
 
+/** Projects a 3D world position to 2D screen coordinates. Runs inside Canvas. */
+function WorldToScreen({
+  position,
+  onProject,
+}: {
+  position: THREE.Vector3;
+  onProject: (x: number, y: number) => void;
+}) {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    const projected = position.clone().project(camera);
+    const x = (projected.x * 0.5 + 0.5) * size.width;
+    const y = (-projected.y * 0.5 + 0.5) * size.height;
+    onProject(x, y);
+  }, [position, camera, size, onProject]);
+  return null;
+}
+
 export function PhysioScene() {
-  const { body, muscleStates, isLoading } = useBodyState();
+  const { muscleStates, isLoading } = useBodyState();
 
   // Selection state
   const [selectedMuscles, setSelectedMuscles] = useState<Set<string>>(
@@ -38,6 +66,10 @@ export function PhysioScene() {
   const [hoveredMuscle, setHoveredMuscle] = useState<string | null>(null);
   const [editingMuscle, setEditingMuscle] = useState<string | null>(null);
   const [editPosition, setEditPosition] = useState<THREE.Vector3 | null>(null);
+  const [editScreenPos, setEditScreenPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Filter state
   const [activeGroups, setActiveGroups] = useState<Set<MuscleGroup>>(new Set());
@@ -53,8 +85,13 @@ export function PhysioScene() {
   );
   const [focusTarget, setFocusTarget] = useState<THREE.Vector3 | null>(null);
 
+  // Visual overrides (per-muscle material playground)
+  const [visualOverrides, setVisualOverrides] = useState<
+    Record<string, MuscleVisualOverride>
+  >({});
+
   // Chat state
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
   const [chatHighlightMeshIds, setChatHighlightMeshIds] = useState<Set<string>>(
     new Set(),
   );
@@ -90,10 +127,7 @@ export function PhysioScene() {
 
   const handleMuscleClick = useCallback(
     (muscleId: string, worldPos: THREE.Vector3, _event: PointerEvent) => {
-      const hasRightSuffix = muscleId.endsWith("_1");
-      const otherSide = hasRightSuffix
-        ? muscleId.slice(0, -2)
-        : `${muscleId}_1`;
+      const otherSide = getOtherSide(muscleId);
 
       // Workout mode: toggle target muscles instead of opening edit panel
       if (isWorkoutMode) {
@@ -175,6 +209,10 @@ export function PhysioScene() {
     }
   }, []);
 
+  const handleScreenProject = useCallback((x: number, y: number) => {
+    setEditScreenPos({ x, y });
+  }, []);
+
   const handleCloseWorkout = useCallback(() => {
     setIsWorkoutOpen(false);
     setIsWorkoutMode(false);
@@ -185,11 +223,6 @@ export function PhysioScene() {
   const handleHoverExercise = useCallback((meshIds: string[] | null) => {
     setWorkoutHighlightMeshIds(new Set(meshIds ?? []));
   }, []);
-
-  // Currently hovered muscle detail
-  const detailMuscleId =
-    hoveredMuscle ??
-    (selectedMuscles.size === 1 ? [...selectedMuscles][0] : null);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
@@ -245,20 +278,8 @@ export function PhysioScene() {
                 ? new Set([...workoutTargetMeshIds, ...workoutHighlightMeshIds])
                 : undefined
             }
+            visualOverrides={visualOverrides}
           />
-
-          {/* 3D Edit Panel */}
-          {editingMuscle && editPosition && !isWorkoutMode && body && (
-            <StructureEditPanel3D
-              muscleId={editingMuscle}
-              bodyId={body._id}
-              muscleState={
-                muscleStates[editingMuscle] ?? createDefaultMuscleState()
-              }
-              position={editPosition}
-              onClose={handleCloseEdit}
-            />
-          )}
 
           <OrbitControls
             ref={controlsRef}
@@ -271,8 +292,38 @@ export function PhysioScene() {
             enableDamping
             dampingFactor={0.05}
           />
+
+          {/* Project 3D muscle position to screen coords */}
+          {editPosition && (
+            <WorldToScreen
+              position={editPosition}
+              onProject={handleScreenProject}
+            />
+          )}
         </Suspense>
       </Canvas>
+
+      {/* Floating edit panel at projected muscle position */}
+      {!isWorkoutOpen && editingMuscle && editScreenPos && (
+        <div
+          className="pointer-events-auto absolute z-10"
+          style={{
+            left: editScreenPos.x,
+            top: editScreenPos.y,
+            transform: "translate(12px, -50%)",
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <StructureEditPanel3D
+            muscleId={editingMuscle}
+            visual={visualOverrides[editingMuscle] ?? DEFAULT_VISUAL}
+            onVisualChange={(v) =>
+              setVisualOverrides((prev) => ({ ...prev, [editingMuscle]: v }))
+            }
+            onClose={handleCloseEdit}
+          />
+        </div>
+      )}
 
       {/* UI Overlays */}
       <div className="pointer-events-none absolute inset-0 flex">
@@ -289,9 +340,9 @@ export function PhysioScene() {
           />
         </div>
 
-        {/* Right: Detail panel + chat */}
+        {/* Right: Workout panel + chat */}
         <div className="ml-auto flex flex-col gap-3 p-4">
-          {isWorkoutOpen ? (
+          {isWorkoutOpen && (
             <WorkoutPanel
               isWorkoutMode={isWorkoutMode}
               onSetWorkoutMode={setIsWorkoutMode}
@@ -300,13 +351,6 @@ export function PhysioScene() {
               onHoverExercise={handleHoverExercise}
               onClose={handleCloseWorkout}
             />
-          ) : (
-            detailMuscleId && (
-              <MuscleDetailPanel
-                muscleId={detailMuscleId}
-                muscleState={muscleStates[detailMuscleId] ?? null}
-              />
-            )
           )}
           {isChatOpen && (
             <ChatPanel

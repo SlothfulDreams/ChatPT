@@ -13,18 +13,124 @@ import {
 } from "@/types/muscle";
 import { type MuscleDepth, shouldShowDepth } from "@/types/muscle-depth";
 import {
-  isClassifiedMuscle,
+  getMuscleGroups,
   type MuscleGroup,
   shouldShowMuscle,
 } from "@/types/muscle-groups";
 import type { RenderingSettings } from "@/types/rendering";
+import type { MuscleVisualOverride } from "./structure-edit-panel-3d";
 
 useGLTF.preload("/models/myological_body.gltf");
 
-// Hide any mesh not explicitly assigned to a muscle group (or .g group nodes).
+// ============================================
+// Hidden mesh patterns: face muscles, non-muscle structures
+// ============================================
+
+const HIDDEN_MESH_PATTERNS = [
+  // Face muscles (from MUSCLE_LIST.txt)
+  "temporoparietalis",
+  "frontalis",
+  "orbicularis oculi",
+  "orbicularis oris",
+  "depressor labii",
+  "mentalis",
+  "depressor anguli",
+  "zygomaticus",
+  "risorius",
+  "nasalis",
+  "levator nasolabialis",
+  "levator anguli oris",
+  "bucinator",
+  "corrugator supercilii",
+  "depressor septi",
+  "levator labii",
+  "procerus",
+  // Additional face/head muscles
+  "platysma",
+  "masseter",
+  "temporalis",
+  "occipitalis",
+  "masseteric",
+  "auricular",
+  // Eye muscles
+  "levator palpebrae",
+  "inferior oblique",
+  "superior oblique",
+  "inferior rectus",
+  "superior rectus",
+  "lateral rectus",
+  "medial rectus",
+  "trochlea of superior oblique",
+  "superior tarsus",
+  "inferior tarsus",
+  "common tendinous ring",
+  // Scalp/head
+  "epicranial aponeurosis",
+  // Mastication
+  "pterygoid",
+  // Neck muscles
+  "digastric",
+  "genioglossus",
+  "geniohyoid",
+  "mylohyoid",
+  "sternocleidomastoid",
+  "omohyoid",
+  "sternohyoid",
+  "sternothyroid",
+  "thyrohyoid",
+  "stylohyoid",
+  "stylopharyngeus",
+  // Tongue
+  "hyoglossus",
+  "styloglossus",
+  // Throat/larynx/pharynx
+  "pharyngeal constrictor",
+  "palatopharyngeus",
+  "arytenoid",
+  "cricothyroid",
+  "crico-arytenoid",
+  "thyro-arytenoid",
+  "thyro-epiglottic",
+  // Non-muscle structures
+  "fascia",
+  "bursa",
+  "tendon",
+  "sheath",
+  "ligament",
+  "cartilage",
+  "articular capsule",
+  "aponeurosis",
+  "retinaculum",
+  "septum",
+  "linea alba",
+  "iliotibial tract",
+  "tract",
+  "arch",
+  "diaphragm",
+  // Skeletal structures
+  "bone",
+  "skeleton",
+  "skeletal",
+  // Debug/visualization geometry
+  "cross section",
+  "scene",
+  // Helper/debug geometry that could cause spikes
+  "helper",
+  "wire",
+  "outline",
+  "line",
+  "edge",
+  "axis",
+  "grid",
+  "arrow",
+];
+
 function shouldHideMesh(name: string): boolean {
-  if (name.endsWith(".g")) return true;
-  return !isClassifiedMuscle(name);
+  const lower = name.toLowerCase().replace(/_/g, " ");
+  if (lower.endsWith(".g")) return true;
+  // Classified muscles override hidden patterns (e.g. "tensor fasciae latae" contains "fascia")
+  if (getMuscleGroups(name).length > 0) return false;
+  return HIDDEN_MESH_PATTERNS.some((p) => lower.includes(p));
 }
 
 // ============================================
@@ -46,6 +152,7 @@ interface MuscleModelProps {
   ) => void;
   onMuscleHover?: (muscleId: string | null) => void;
   workoutHighlightMeshIds?: Set<string>;
+  visualOverrides?: Record<string, MuscleVisualOverride>;
 }
 
 // ============================================
@@ -63,6 +170,7 @@ export function MuscleModel({
   onMuscleClick,
   onMuscleHover,
   workoutHighlightMeshIds,
+  visualOverrides,
 }: MuscleModelProps) {
   const { scene } = useGLTF("/models/myological_body.gltf");
   const groupRef = useRef<THREE.Group>(null);
@@ -87,24 +195,14 @@ export function MuscleModel({
   useEffect(() => {
     const hasSelection = selectedMuscles.size > 0;
 
-    let debugShown = 0;
-    let debugHidden = 0;
-    const sampleHidden: string[] = [];
-    const sampleShown: string[] = [];
     clonedScene.traverse((child) => {
       if (!(child as THREE.Mesh).isMesh) return;
       const mesh = child as THREE.Mesh;
 
       // Visibility filters
       if (shouldHideMesh(mesh.name)) {
-        debugHidden++;
-        if (sampleHidden.length < 5) sampleHidden.push(mesh.name);
         mesh.visible = false;
         mesh.raycast = () => {};
-        return;
-      }
-      if (!shouldShowMuscle(mesh.name, activeGroups)) {
-        mesh.visible = false;
         return;
       }
       if (!shouldShowDepth(mesh.name, selectedDepths)) {
@@ -112,9 +210,8 @@ export function MuscleModel({
         return;
       }
 
-      debugShown++;
-      if (sampleShown.length < 5) sampleShown.push(mesh.name);
       mesh.visible = true;
+      const inActiveGroup = shouldShowMuscle(mesh.name, activeGroups);
 
       // Get state for this muscle
       const state = muscleStates[mesh.name] ?? createDefaultMuscleState();
@@ -135,8 +232,9 @@ export function MuscleModel({
       let finalOpacity =
         conditionParams.opacity * strengthFactor * renderingSettings.opacity;
 
-      // Dimming: if other muscles are selected, dim non-selected
-      const isHighlighted = selectedMuscles.has(mesh.name) || !hasSelection;
+      // Dimming: muscles outside active group or outside selection get dulled
+      const isHighlighted =
+        (selectedMuscles.has(mesh.name) || !hasSelection) && inActiveGroup;
       if (!isHighlighted) {
         finalColor = new THREE.Color(0.25, 0.25, 0.25);
         finalOpacity *= 0.5;
@@ -158,19 +256,26 @@ export function MuscleModel({
         emissiveIntensity = conditionParams.emissiveIntensity;
       }
 
+      // Apply visual override if present
+      const vo = visualOverrides?.[mesh.name];
+      if (vo) {
+        finalColor = new THREE.Color(vo.color[0], vo.color[1], vo.color[2]);
+        finalOpacity = vo.opacity;
+        emissiveColor = finalColor.clone();
+        emissiveIntensity = vo.emissiveIntensity;
+      }
+
       mesh.material = new THREE.MeshStandardMaterial({
         color: finalColor,
         transparent: true,
         opacity: finalOpacity,
-        metalness: renderingSettings.metalness,
-        roughness: renderingSettings.roughness,
+        metalness: vo?.metalness ?? renderingSettings.metalness,
+        roughness: vo?.roughness ?? renderingSettings.roughness,
         wireframe: renderingSettings.wireframe,
         emissive: emissiveColor,
         emissiveIntensity,
       });
     });
-    console.log(`[MuscleModel] shown: ${debugShown}, hidden: ${debugHidden}`);
-    console.log("[MuscleModel] sampleHidden:", JSON.stringify(sampleHidden));
   }, [
     clonedScene,
     muscleStates,
@@ -180,6 +285,7 @@ export function MuscleModel({
     selectedMuscles,
     selectedGroup,
     workoutHighlightMeshIds,
+    visualOverrides,
   ]);
 
   // Click handler

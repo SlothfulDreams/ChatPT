@@ -8,10 +8,15 @@ import { api } from "../../convex/_generated/api";
 export function UserSync({ children }: { children: React.ReactNode }) {
   const { user: clerkUser, isLoaded } = useUser();
   const convexUser = useQuery(api.users.current);
+  const body = useQuery(
+    api.body.getByUser,
+    convexUser ? { userId: convexUser._id } : "skip",
+  );
   const upsertUser = useMutation(api.users.upsertFromClerk);
   const ensureBody = useMutation(api.body.ensure);
   const syncing = useRef(false);
 
+  // Sync Clerk user to Convex on first load
   useEffect(() => {
     if (!isLoaded || !clerkUser || syncing.current) return;
     if (convexUser !== undefined && convexUser !== null) return;
@@ -32,6 +37,17 @@ export function UserSync({ children }: { children: React.ReactNode }) {
       }
     })();
   }, [isLoaded, clerkUser, convexUser, upsertUser, ensureBody]);
+
+  // Ensure body record exists whenever user exists but body doesn't
+  useEffect(() => {
+    if (!convexUser || body !== null || syncing.current) return;
+    if (body === undefined) return; // still loading
+
+    syncing.current = true;
+    ensureBody({ userId: convexUser._id }).finally(() => {
+      syncing.current = false;
+    });
+  }, [convexUser, body, ensureBody]);
 
   return <>{children}</>;
 }
