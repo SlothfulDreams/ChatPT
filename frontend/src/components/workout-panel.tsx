@@ -151,6 +151,7 @@ export function WorkoutPanel({
   const deleteExercise = useMutation(api.workouts.deleteExercise);
   const reorderExercises = useMutation(api.workouts.reorderExercises);
   const toggleComplete = useMutation(api.workouts.toggleExerciseComplete);
+  const applyWorkoutEffect = useMutation(api.muscles.applyWorkoutEffect);
 
   // Drag-to-reorder state
   const [draggedExId, setDraggedExId] = useState<Id<"workoutExercises"> | null>(
@@ -208,6 +209,12 @@ export function WorkoutPanel({
   // Fire confetti once when the user completes the last exercise
   const prevCompletedRef = useRef(completedCount);
   const prevLengthRef = useRef(exercises.length);
+  const exercisesRef = useRef(exercises);
+  exercisesRef.current = exercises;
+  const bodyRef = useRef(body);
+  bodyRef.current = body;
+  const applyWorkoutEffectRef = useRef(applyWorkoutEffect);
+  applyWorkoutEffectRef.current = applyWorkoutEffect;
   useEffect(() => {
     const prevCompleted = prevCompletedRef.current;
     const prevLength = prevLengthRef.current;
@@ -233,6 +240,23 @@ export function WorkoutPanel({
         origin: { y: 0.7 },
         angle: 60,
       });
+
+      // Apply therapeutic effect to targeted muscles
+      const currentBody = bodyRef.current;
+      if (currentBody?._id) {
+        const allMeshIds = new Set<string>();
+        for (const ex of exercisesRef.current) {
+          for (const id of ex.targetMeshIds) {
+            allMeshIds.add(id);
+          }
+        }
+        if (allMeshIds.size > 0) {
+          applyWorkoutEffectRef.current({
+            bodyId: currentBody._id,
+            meshIds: [...allMeshIds],
+          });
+        }
+      }
     }
   }, [completedCount, isWorkoutComplete, exercises.length]);
 

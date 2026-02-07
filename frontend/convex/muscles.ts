@@ -78,6 +78,47 @@ export const upsert = mutation({
   },
 });
 
+export const applyWorkoutEffect = mutation({
+  args: {
+    bodyId: v.id("bodies"),
+    meshIds: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const conditionsToRecover = new Set([
+      "tight",
+      "knotted",
+      "strained",
+      "inflamed",
+      "weak",
+      "fatigued",
+    ]);
+
+    for (const meshId of args.meshIds) {
+      const existing = await ctx.db
+        .query("muscles")
+        .withIndex("by_body_mesh", (q) =>
+          q.eq("bodyId", args.bodyId).eq("meshId", meshId),
+        )
+        .unique();
+
+      if (!existing) continue;
+
+      const updates: Record<string, unknown> = { updatedAt: Date.now() };
+      updates.pain = Math.max(0, existing.pain - 2);
+      updates.mobility = Math.min(1, existing.mobility + 0.05);
+
+      if (conditionsToRecover.has(existing.condition)) {
+        updates.condition = "recovering";
+      }
+
+      await ctx.db.patch(existing._id, updates);
+    }
+
+    return null;
+  },
+});
+
 export const update = mutation({
   args: {
     muscleId: v.id("muscles"),
