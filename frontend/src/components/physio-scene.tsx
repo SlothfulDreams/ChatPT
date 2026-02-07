@@ -18,7 +18,7 @@ import {
 import type * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { useBodyState } from "@/hooks/useBodyState";
-import { getOtherSide } from "@/lib/muscle-utils";
+import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
 import type { MuscleDepth } from "@/types/muscle-depth";
 import type { MuscleGroup } from "@/types/muscle-groups";
 import {
@@ -35,7 +35,6 @@ import {
   type MuscleVisualOverride,
   StructureEditPanel3D,
 } from "./structure-edit-panel-3d";
-import { ViewControls } from "./view-controls";
 import { WorkoutPanel } from "./workout-panel";
 
 // ============================================
@@ -417,33 +416,66 @@ export function PhysioScene() {
           )}
         </div>
 
-        {/* Bottom center: View controls + mode toggles */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-          <ViewControls
-            isFrontView={isFrontView}
-            onToggleView={() => setIsFrontView((v) => !v)}
-          />
-          <button
-            type="button"
-            onClick={() =>
-              isWorkoutOpen ? handleCloseWorkout() : setIsWorkoutOpen(true)
-            }
-            className={`pointer-events-auto mosaic-btn px-4 py-2 text-xs font-medium text-white transition-colors ${
-              isWorkoutOpen ? "mosaic-btn-active" : ""
-            }`}
-          >
-            Workout
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsChatOpen((v) => !v)}
-            className={`pointer-events-auto mosaic-btn px-4 py-2 text-xs font-medium text-white transition-colors ${
-              isChatOpen ? "mosaic-btn-active" : ""
-            }`}
-          >
-            Chat
-          </button>
+        {/* Bottom center: Unified pill bar */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
+          <div className="pointer-events-auto mosaic-panel flex items-center rounded-full px-1 py-1">
+            {/* Front/Back View */}
+            <button
+              type="button"
+              onClick={() => setIsFrontView((v) => !v)}
+              className="relative rounded-full px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:text-white"
+            >
+              {isFrontView ? "Back View" : "Front View"}
+            </button>
+
+            <div className="h-5 w-px bg-white/10" />
+
+            {/* Workout */}
+            <button
+              type="button"
+              onClick={() =>
+                isWorkoutOpen ? handleCloseWorkout() : setIsWorkoutOpen(true)
+              }
+              className={`relative rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                isWorkoutOpen
+                  ? "bg-gradient-to-r from-blue-500/20 to-teal-500/15 text-white"
+                  : "text-white/70 hover:text-white"
+              }`}
+            >
+              {isWorkoutOpen && (
+                <span className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400 to-teal-400" />
+              )}
+              Workout
+            </button>
+
+            <div className="h-5 w-px bg-white/10" />
+
+            {/* Chat */}
+            <button
+              type="button"
+              onClick={() => setIsChatOpen((v) => !v)}
+              className={`relative rounded-full px-4 py-2 text-xs font-medium transition-colors ${
+                isChatOpen
+                  ? "bg-gradient-to-r from-blue-500/20 to-teal-500/15 text-white"
+                  : "text-white/70 hover:text-white"
+              }`}
+            >
+              {isChatOpen && (
+                <span className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400 to-teal-400" />
+              )}
+              Chat
+            </button>
+          </div>
         </div>
+
+        {/* Hovered muscle tooltip */}
+        {hoveredMuscle && (
+          <div className="animate-fade-in-fast pointer-events-none absolute bottom-20 left-1/2 -translate-x-1/2">
+            <span className="mosaic-tag px-3 py-1.5 text-xs font-medium">
+              {formatMuscleName(hoveredMuscle)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Onboarding hint — shown once */}
@@ -451,8 +483,9 @@ export function PhysioScene() {
 
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <p className="text-sm text-white/60">Loading...</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/40 border-t-teal-400" />
+          <p className="mt-3 text-xs text-white/40">Loading...</p>
         </div>
       )}
     </div>

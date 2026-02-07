@@ -70,9 +70,9 @@ export function StructureEditPanel3D({
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-white/50 hover:text-white"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
         >
-          X
+          ×
         </button>
       </div>
 

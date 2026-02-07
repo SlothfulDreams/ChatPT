@@ -201,7 +201,7 @@ export function ChatPanel({
                   (c) => c._id !== activeConversationId,
                 );
                 return (
-                  <div className="absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-[#0a0e18]/95 shadow-2xl backdrop-blur-xl">
+                  <div className="mosaic-panel absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden">
                     <div className="max-h-64 overflow-y-auto">
                       {pastConversations.length === 0 && (
                         <p className="px-4 py-3 text-xs text-white/30">
@@ -211,7 +211,7 @@ export function ChatPanel({
                       {pastConversations.map((conv) => (
                         <div
                           key={conv._id}
-                          className="group flex items-center text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                          className="group flex items-center border-b border-white/[0.04] text-white/60 transition-colors last:border-b-0 hover:bg-white/5 hover:text-white"
                         >
                           <button
                             type="button"
@@ -291,10 +291,60 @@ export function ChatPanel({
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center">
-            <p className="max-w-[240px] text-center text-xs text-white/30">
-              Describe your pain, tightness, or injury and I'll help assess it.
+          <div className="flex h-full flex-col items-center justify-center gap-3">
+            {/* Gradient icon */}
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500/20 to-teal-500/15">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="url(#emptyGrad)"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <defs>
+                  <linearGradient
+                    id="emptyGrad"
+                    x1="0"
+                    y1="0"
+                    x2="24"
+                    y2="24"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop stopColor="#3b82f6" />
+                    <stop offset="1" stopColor="#14b8a6" />
+                  </linearGradient>
+                </defs>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-white/50">How can I help?</p>
+            <p className="max-w-[220px] text-center text-xs text-white/30">
+              Describe pain, tightness, or an injury and I'll assess it.
             </p>
+            <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+              {[
+                "My shoulder hurts",
+                "Assess my lower back",
+                "I pulled a hamstring",
+              ].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => {
+                    const meshIds = selectedMuscles
+                      ? Array.from(selectedMuscles)
+                      : undefined;
+                    sendMessage(suggestion, meshIds);
+                  }}
+                  className="mosaic-chip cursor-pointer rounded-full px-2.5 py-1 text-[11px]"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((msg) => (
@@ -376,10 +426,21 @@ function MessageBubble({
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-          isUser ? "mosaic-tag text-white/90" : "bg-white/5 text-white/80"
-        } ${message.isStreaming ? "animate-pulse" : ""}`}
+          isUser
+            ? "mosaic-tag text-white/90"
+            : "border-l-2 border-blue-400/40 bg-white/[0.07] text-white/80"
+        }`}
       >
-        <p className="whitespace-pre-wrap">{message.content}</p>
+        <p className="whitespace-pre-wrap">
+          {message.content}
+          {message.isStreaming && (
+            <span className="ml-1 inline-flex items-center align-middle text-white/50">
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+            </span>
+          )}
+        </p>
 
         {message.actions && message.actions.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1 border-t border-white/10 pt-2">
