@@ -304,14 +304,14 @@ export function WorkoutPanel({
 
   if (isLoading || !user) {
     return (
-      <div className="pointer-events-auto mosaic-panel w-80 p-4 text-white">
+      <div className="pointer-events-auto mosaic-panel w-96 p-4 text-white">
         <p className="text-xs text-white/40">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="pointer-events-auto mosaic-panel flex max-h-[85vh] w-80 flex-col text-white">
+    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-96 shrink flex-col text-white">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         {view !== "plan-list" && (
@@ -332,7 +332,7 @@ export function WorkoutPanel({
         <button
           type="button"
           onClick={handleClose}
-          className="text-xs text-white/40 transition-colors hover:text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-base text-white/40 transition-colors hover:bg-white/10 hover:text-white"
         >
           &times;
         </button>

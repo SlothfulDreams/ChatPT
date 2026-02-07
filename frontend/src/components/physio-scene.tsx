@@ -38,6 +38,41 @@ import {
 import { ViewControls } from "./view-controls";
 import { WorkoutPanel } from "./workout-panel";
 
+// ============================================
+// Onboarding hint — dismissible, shown once
+// ============================================
+function OnboardingHint() {
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("chatpt-onboarded");
+  });
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    localStorage.setItem("chatpt-onboarded", "1");
+  }, []);
+
+  if (!visible) return null;
+
+  return (
+    <div className="animate-fade-in absolute bottom-16 left-1/2 z-20 -translate-x-1/2">
+      <div className="mosaic-panel pointer-events-auto flex items-center gap-3 px-5 py-3">
+        <span className="text-xs leading-relaxed text-white/60">
+          Click a muscle to inspect it &middot; Use the chat to describe pain or
+          injuries &middot; Orbit with drag, zoom with scroll
+        </span>
+        <button
+          type="button"
+          onClick={dismiss}
+          className="shrink-0 text-xs text-white/30 transition-colors hover:text-white/70"
+        >
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Projects a 3D world position to 2D screen coordinates. Runs inside Canvas. */
 function WorldToScreen({
   position,
@@ -288,7 +323,7 @@ export function PhysioScene() {
             enableZoom
             enablePan
             minDistance={0.5}
-            maxDistance={5}
+            maxDistance={3}
             enableDamping
             dampingFactor={0.05}
           />
@@ -304,7 +339,7 @@ export function PhysioScene() {
       </Canvas>
 
       {/* Floating edit panel at projected muscle position */}
-      {!isWorkoutOpen && editingMuscle && editScreenPos && (
+      {!isWorkoutMode && editingMuscle && editScreenPos && (
         <div
           className="pointer-events-auto absolute z-10"
           style={{
@@ -328,7 +363,7 @@ export function PhysioScene() {
       {/* UI Overlays */}
       <div className="pointer-events-none absolute inset-0 flex">
         {/* Left: Filters */}
-        <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-3 p-3">
           <MuscleFilter
             activeGroups={activeGroups}
             onToggleGroup={handleToggleGroup}
@@ -340,8 +375,8 @@ export function PhysioScene() {
           />
         </div>
 
-        {/* Right: Workout panel + chat */}
-        <div className="ml-auto flex flex-col gap-3 p-4">
+        {/* Right: Workout panel + chat — flush to edge, fill height */}
+        <div className="ml-auto flex h-full min-h-0 flex-col gap-2 overflow-hidden p-2 pb-14">
           {isWorkoutOpen && (
             <WorkoutPanel
               isWorkoutMode={isWorkoutMode}
@@ -363,7 +398,7 @@ export function PhysioScene() {
         </div>
 
         {/* Bottom center: View controls + mode toggles */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
           <ViewControls
             isFrontView={isFrontView}
             onToggleView={() => setIsFrontView((v) => !v)}
@@ -390,6 +425,9 @@ export function PhysioScene() {
           </button>
         </div>
       </div>
+
+      {/* Onboarding hint — shown once */}
+      <OnboardingHint />
 
       {/* Loading overlay */}
       {isLoading && (

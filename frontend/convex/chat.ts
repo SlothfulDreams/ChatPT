@@ -89,6 +89,7 @@ export const createConversation = mutation({
     }
     return await ctx.db.insert("conversations", {
       userId: args.userId,
+      title: "New Conversation",
       isActive: true,
       updatedAt: Date.now(),
     });
@@ -129,6 +130,67 @@ export const setConversationTitle = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.patch(args.conversationId, { title: args.title });
+    return null;
+  },
+});
+
+export const switchConversation = mutation({
+  args: { userId: v.id("users"), conversationId: v.id("conversations") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Deactivate all active conversations for this user
+    const active = await ctx.db
+      .query("conversations")
+      .withIndex("by_user_active", (q) =>
+        q.eq("userId", args.userId).eq("isActive", true),
+      )
+      .collect();
+    for (const conv of active) {
+      await ctx.db.patch(conv._id, { isActive: false });
+    }
+    // Activate the target conversation
+    await ctx.db.patch(args.conversationId, { isActive: true });
+    return null;
+  },
+});
+
+export const deleteConversation = mutation({
+  args: { userId: v.id("users"), conversationId: v.id("conversations") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Delete all messages in the conversation
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId),
+      )
+      .collect();
+    for (const msg of messages) {
+      await ctx.db.delete(msg._id);
+    }
+    // Check if this was the active conversation
+    const conv = await ctx.db.get(args.conversationId);
+    const wasActive = conv?.isActive;
+    // Delete the conversation
+    await ctx.db.delete(args.conversationId);
+    // If it was active, activate the most recent remaining conversation
+    if (wasActive) {
+      const remaining = await ctx.db
+        .query("conversations")
+        .withIndex("by_user", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .first();
+      if (remaining) {
+        await ctx.db.patch(remaining._id, { isActive: true });
+      } else {
+        await ctx.db.insert("conversations", {
+          userId: args.userId,
+          title: "New Conversation",
+          isActive: true,
+          updatedAt: Date.now(),
+        });
+      }
+    }
     return null;
   },
 });

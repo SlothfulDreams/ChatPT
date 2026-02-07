@@ -16,10 +16,19 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
     sendMessage,
     stopStreaming,
     newConversation,
+    switchConversation,
+    renameConversation,
+    deleteConversation,
+    conversations,
+    activeConversationId,
     conversationTitle,
   } = useChat();
   const [input, setInput] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -28,6 +37,21 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
     }
   }, [messages]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isDropdownOpen]);
 
   const handleSend = useCallback(() => {
     const text = input.trim();
@@ -46,25 +70,153 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
     [handleSend],
   );
 
+  const handleStartRename = useCallback(() => {
+    setTitleDraft(conversationTitle ?? "");
+    setIsEditingTitle(true);
+  }, [conversationTitle]);
+
+  const handleFinishRename = useCallback(() => {
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== conversationTitle) {
+      renameConversation(trimmed);
+    }
+    setIsEditingTitle(false);
+  }, [titleDraft, conversationTitle, renameConversation]);
+
+  const handleTitleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleFinishRename();
+      } else if (e.key === "Escape") {
+        setIsEditingTitle(false);
+      }
+    },
+    [handleFinishRename],
+  );
+
+  const handleNewConversation = useCallback(() => {
+    newConversation();
+  }, [newConversation]);
+
+  const handleDeleteConversation = useCallback(
+    (e: React.MouseEvent, conversationId: string) => {
+      e.stopPropagation();
+      deleteConversation(
+        conversationId as Parameters<typeof deleteConversation>[0],
+      );
+    },
+    [deleteConversation],
+  );
+
   return (
-    <div className="pointer-events-auto mosaic-panel flex h-[70vh] w-96 flex-col text-white">
+    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-96 flex-1 flex-col text-white">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
-        <h3 className="flex-1 truncate text-sm font-semibold">
-          {conversationTitle ?? "New Conversation"}
-        </h3>
+      <div
+        className="relative flex shrink-0 items-center gap-1.5 border-b border-white/10 px-3 py-2.5"
+        style={{ zIndex: 10 }}
+      >
+        {/* New conversation button */}
         <button
           type="button"
-          onClick={newConversation}
-          className="rounded px-2 py-0.5 text-xs text-white/40 transition-colors hover:bg-white/10 hover:text-white/70"
+          onClick={handleNewConversation}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
           title="New conversation"
         >
           +
         </button>
+
+        {/* Title dropdown */}
+        {isEditingTitle ? (
+          <input
+            autoFocus
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={handleFinishRename}
+            onKeyDown={handleTitleKeyDown}
+            className="min-w-0 flex-1 rounded bg-white/10 px-2 py-1 text-xs font-semibold text-white outline-none focus:ring-1 focus:ring-white/20"
+          />
+        ) : (
+          <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsDropdownOpen((v) => !v)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setIsDropdownOpen(false);
+                handleStartRename();
+              }}
+              className="flex w-full items-center gap-1.5 text-xs font-semibold text-white hover:text-white/70"
+              title="Double-click to rename"
+            >
+              <span className="truncate">
+                {conversationTitle ?? "New Conversation"}
+              </span>
+              <span className="shrink-0 text-[9px] text-white/30">
+                {isDropdownOpen ? "▲" : "▼"}
+              </span>
+            </button>
+
+            {isDropdownOpen &&
+              (() => {
+                const pastConversations = conversations.filter(
+                  (c) => c._id !== activeConversationId,
+                );
+                return (
+                  <div className="absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-white/10 bg-[#0a0e18]/95 shadow-2xl backdrop-blur-xl">
+                    <div className="max-h-64 overflow-y-auto">
+                      {pastConversations.length === 0 && (
+                        <p className="px-4 py-3 text-xs text-white/30">
+                          No past conversations
+                        </p>
+                      )}
+                      {pastConversations.map((conv) => (
+                        <div
+                          key={conv._id}
+                          className="group flex items-center text-white/60 transition-colors hover:bg-white/5 hover:text-white"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              switchConversation(conv._id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className="flex min-w-0 flex-1 flex-col gap-0.5 px-4 py-2.5 text-left"
+                          >
+                            <span className="truncate text-xs font-medium">
+                              {conv.title ?? "Untitled"}
+                            </span>
+                            <span className="text-[10px] text-white/25">
+                              {new Date(conv.updatedAt).toLocaleDateString(
+                                undefined,
+                                { month: "short", day: "numeric" },
+                              )}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) =>
+                              handleDeleteConversation(e, conv._id)
+                            }
+                            className="mr-2 flex h-6 w-6 shrink-0 items-center justify-center rounded text-white/0 transition-all hover:bg-white/10 hover:text-red-400 group-hover:text-white/20"
+                            title="Delete conversation"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+          </div>
+        )}
+
+        {/* Close panel button */}
         <button
           type="button"
           onClick={onClose}
-          className="text-xs text-white/40 transition-colors hover:text-white"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
         >
           ×
         </button>

@@ -82,6 +82,10 @@ export function useChat() {
     api.chat.getActiveConversation,
     user ? { userId: user._id } : "skip",
   );
+  const allConversations = useQuery(
+    api.chat.getConversations,
+    user ? { userId: user._id } : "skip",
+  );
   const storedMessages = useQuery(
     api.chat.getMessages,
     activeConversation ? { conversationId: activeConversation._id } : "skip",
@@ -94,6 +98,8 @@ export function useChat() {
   const upsertMuscle = useMutation(api.muscles.upsert);
   const addKnot = useMutation(api.knots.add);
   const setConversationTitle = useMutation(api.chat.setConversationTitle);
+  const switchConversationMut = useMutation(api.chat.switchConversation);
+  const deleteConversationMut = useMutation(api.chat.deleteConversation);
 
   // Local streaming state
   const [streamingContent, setStreamingContent] = useState("");
@@ -335,12 +341,44 @@ export function useChat() {
     await createConversation({ userId: user._id });
   }, [user, createConversation]);
 
+  const switchConversation = useCallback(
+    async (conversationId: Id<"conversations">) => {
+      if (!user) return;
+      await switchConversationMut({ userId: user._id, conversationId });
+    },
+    [user, switchConversationMut],
+  );
+
+  const renameConversation = useCallback(
+    async (title: string) => {
+      if (!activeConversation) return;
+      await setConversationTitle({
+        conversationId: activeConversation._id,
+        title,
+      });
+    },
+    [activeConversation, setConversationTitle],
+  );
+
+  const deleteConversation = useCallback(
+    async (conversationId: Id<"conversations">) => {
+      if (!user) return;
+      await deleteConversationMut({ userId: user._id, conversationId });
+    },
+    [user, deleteConversationMut],
+  );
+
   return {
     messages,
     isStreaming,
     sendMessage,
     stopStreaming,
     newConversation,
+    switchConversation,
+    renameConversation,
+    deleteConversation,
+    conversations: allConversations ?? [],
+    activeConversationId: activeConversation?._id ?? null,
     conversationTitle: activeConversation?.title ?? null,
   };
 }
