@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from backend.schemas.workout import GenerateWorkoutRequest
+
 app = FastAPI()
 
 app.add_middleware(
@@ -307,3 +309,27 @@ async def chat(request: ChatRequest):
             yield f"data: {json.dumps({'type': 'done', 'content': accumulated_text, 'actions': actions})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.post("/generate-workout")
+async def generate_workout(request: GenerateWorkoutRequest):
+    from backend.chains.workout_chain import generate_workout_plan
+    from backend.services.image_gen import generate_all_exercise_images
+
+    # 1. Run LangChain chain with RAG summaries + user context
+    plan = await generate_workout_plan(
+        rag_summaries=request.ragSummaries,
+        muscle_states=[m.model_dump() for m in request.muscleStates],
+        available_mesh_ids=request.availableMeshIds,
+        goals=request.goals,
+        duration_minutes=request.durationMinutes,
+        equipment=request.equipment,
+    )
+
+    # 2. Generate images for each exercise via Dedalus/Gemini
+    exercises = plan.get("exercises", [])
+    exercises = await generate_all_exercise_images(exercises)
+    plan["exercises"] = exercises
+
+    # 3. Return GeneratedPlan matching Convex schema
+    return plan

@@ -2,10 +2,13 @@
 
 import { useMutation } from "convex/react";
 import { useCallback, useState } from "react";
+import { useBodyState } from "@/hooks/useBodyState";
 import { useWorkoutState } from "@/hooks/useWorkoutState";
+import { type GeneratedPlan, generateWorkout } from "@/lib/generate-workout";
 import { formatMuscleName } from "@/lib/muscle-utils";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { GeneratedExercisesPreview } from "./generated-exercises-preview";
 
 type WorkoutView = "plan-list" | "plan-detail" | "exercise-form";
 
@@ -51,6 +54,15 @@ export function WorkoutPanel({
   const [exNotes, setExNotes] = useState("");
   const [editingExerciseId, setEditingExerciseId] =
     useState<Id<"workoutExercises"> | null>(null);
+
+  // AI generation state
+  const [generating, setGenerating] = useState(false);
+  const [generatedPlan, setGeneratedPlan] = useState<GeneratedPlan | null>(
+    null,
+  );
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  const { body, muscleStates } = useBodyState();
 
   // Mutations
   const createPlan = useMutation(api.workouts.createPlan);
@@ -235,6 +247,54 @@ export function WorkoutPanel({
     [workoutTargetMeshIds, onWorkoutTargetMeshIdsChange],
   );
 
+  const handleGenerate = useCallback(async () => {
+    if (!selectedPlanId) return;
+    setGenerating(true);
+    setGenerateError(null);
+    setGeneratedPlan(null);
+
+    try {
+      // Build muscle states for the API
+      const apiMuscleStates = Object.entries(muscleStates)
+        .filter(([, s]) => s.condition !== "healthy" || s.metrics.pain > 0)
+        .map(([meshId, s]) => ({
+          meshId,
+          condition: s.condition,
+          pain: s.metrics.pain,
+          strength: s.metrics.strength,
+          mobility: s.metrics.mobility,
+        }));
+
+      const availableMeshIds = Object.keys(muscleStates);
+
+      // Placeholder RAG summaries until the RAG agent is built
+      const ragSummaries = [
+        "For general fitness: 2-4 sets of 8-15 reps per exercise, 60-90s rest between sets. Include both compound and isolation movements.",
+        "Begin each session with 5-10 minutes of dynamic warm-up targeting the primary muscle groups. Include mobility work for any restricted areas.",
+        "Progressive overload principle: gradually increase load, volume, or intensity over time. Start conservatively for deconditioned or injured muscles.",
+        "For rehabilitation: focus on controlled eccentric movements, lighter loads (40-60% 1RM), higher reps (12-20), and full range of motion.",
+      ];
+
+      const result = await generateWorkout({
+        ragSummaries,
+        muscleStates: apiMuscleStates,
+        availableMeshIds,
+        sex: body?.sex ?? undefined,
+        goals: "general fitness",
+        durationMinutes: 45,
+        equipment: [],
+      });
+
+      setGeneratedPlan(result);
+    } catch (err) {
+      setGenerateError(
+        err instanceof Error ? err.message : "Generation failed",
+      );
+    } finally {
+      setGenerating(false);
+    }
+  }, [selectedPlanId, muscleStates, body]);
+
   // Deduplicate bilateral pairs for display
   const uniqueTargets = [...workoutTargetMeshIds].filter(
     (id) => !id.endsWith("_1"),
@@ -395,6 +455,32 @@ export function WorkoutPanel({
             >
               + Add Exercise
             </button>
+
+            {/* Generate with AI */}
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="w-full rounded border border-blue-500/20 bg-blue-500/10 py-2 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
+            >
+              {generating ? "Generating..." : "Generate with AI"}
+            </button>
+
+            {/* Generation error */}
+            {generateError && (
+              <p className="text-xs text-red-400">{generateError}</p>
+            )}
+
+            {/* Generated exercises preview */}
+            {generatedPlan && selectedPlanId && (
+              <GeneratedExercisesPreview
+                plan={generatedPlan}
+                planId={selectedPlanId}
+                onSaved={() => setGeneratedPlan(null)}
+                onRegenerate={handleGenerate}
+                onDismiss={() => setGeneratedPlan(null)}
+              />
+            )}
           </div>
         )}
 
