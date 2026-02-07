@@ -5,8 +5,8 @@ import json
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from backend.llm.dedalus_chat_model import DedalusChatModel
-from backend.schemas.workout import GeneratedPlan
+from llm.dedalus_chat_model import DedalusChatModel
+from schemas.workout import GeneratedPlan
 
 SYSTEM_PROMPT = """\
 You are an expert strength & conditioning coach and physiotherapist. \

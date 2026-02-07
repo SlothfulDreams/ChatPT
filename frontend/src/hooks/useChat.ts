@@ -188,7 +188,7 @@ export function useChat() {
 
   // Send a message
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, selectedMeshIds?: string[]) => {
       if (!user || !body || isStreaming) return;
 
       // Ensure conversation exists
@@ -254,6 +254,7 @@ export function useChat() {
                   }
                 : null,
               availableMeshIds,
+              selectedMeshIds: selectedMeshIds ?? [],
             }),
             signal: abort.signal,
           },

@@ -3,13 +3,17 @@ from __future__ import annotations
 import json
 import os
 
-import anthropic
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from dedalus_labs import AsyncDedalus
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from backend.schemas.workout import GenerateWorkoutRequest
+from schemas.workout import GenerateWorkoutRequest
 
 app = FastAPI()
 
@@ -25,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = anthropic.Anthropic()  # uses ANTHROPIC_API_KEY env var
+client = AsyncDedalus()  # uses DEDALUS_API_KEY env var
 
 # ============================================
 # Models
@@ -60,106 +64,116 @@ class ChatRequest(BaseModel):
     muscleStates: list[MuscleContext]
     body: BodyContext | None = None
     availableMeshIds: list[str]
+    selectedMeshIds: list[str] = []
 
 
 # ============================================
 # Tools
 # ============================================
 
-TOOLS: list[anthropic.types.ToolParam] = [
+TOOLS: list[dict] = [
     {
-        "name": "update_muscle",
-        "description": (
-            "Update a muscle's condition, pain level, strength, mobility, and/or clinical summary. "
-            "Use this when you have gathered enough information to make an assessment about a specific muscle. "
-            "You don't need all fields -- only provide what you can reasonably assess from the conversation."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "meshId": {
-                    "type": "string",
-                    "description": "The exact mesh ID of the muscle to update. Use _1 suffix for right side.",
+        "type": "function",
+        "function": {
+            "name": "update_muscle",
+            "description": (
+                "Update a muscle's condition, pain level, strength, mobility, and/or clinical summary. "
+                "Use this when you have gathered enough information to make an assessment about a specific muscle. "
+                "You don't need all fields -- only provide what you can reasonably assess from the conversation."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "meshId": {
+                        "type": "string",
+                        "description": "The exact mesh ID of the muscle to update. Use _1 suffix for right side.",
+                    },
+                    "condition": {
+                        "type": "string",
+                        "enum": [
+                            "healthy",
+                            "tight",
+                            "knotted",
+                            "strained",
+                            "torn",
+                            "recovering",
+                            "inflamed",
+                            "weak",
+                            "fatigued",
+                        ],
+                    },
+                    "pain": {
+                        "type": "number",
+                        "description": "Pain level 0-10",
+                    },
+                    "strength": {
+                        "type": "number",
+                        "description": "Strength ratio 0-1 (1 = full strength)",
+                    },
+                    "mobility": {
+                        "type": "number",
+                        "description": "Mobility/ROM ratio 0-1 (1 = full range)",
+                    },
+                    "summary": {
+                        "type": "string",
+                        "description": "Clinical summary of the muscle's current status, your reasoning, and any recommendations.",
+                    },
                 },
-                "condition": {
-                    "type": "string",
-                    "enum": [
-                        "healthy",
-                        "tight",
-                        "knotted",
-                        "strained",
-                        "torn",
-                        "recovering",
-                        "inflamed",
-                        "weak",
-                        "fatigued",
-                    ],
-                },
-                "pain": {
-                    "type": "number",
-                    "description": "Pain level 0-10",
-                },
-                "strength": {
-                    "type": "number",
-                    "description": "Strength ratio 0-1 (1 = full strength)",
-                },
-                "mobility": {
-                    "type": "number",
-                    "description": "Mobility/ROM ratio 0-1 (1 = full range)",
-                },
-                "summary": {
-                    "type": "string",
-                    "description": "Clinical summary of the muscle's current status, your reasoning, and any recommendations.",
-                },
+                "required": ["meshId"],
             },
-            "required": ["meshId"],
         },
     },
     {
-        "name": "add_knot",
-        "description": (
-            "Add a trigger point, adhesion, or spasm to a muscle. "
-            "Use when the user describes a specific localized point of tension or pain."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "meshId": {
-                    "type": "string",
-                    "description": "The exact mesh ID of the muscle",
+        "type": "function",
+        "function": {
+            "name": "add_knot",
+            "description": (
+                "Add a trigger point, adhesion, or spasm to a muscle. "
+                "Use when the user describes a specific localized point of tension or pain."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "meshId": {
+                        "type": "string",
+                        "description": "The exact mesh ID of the muscle",
+                    },
+                    "severity": {
+                        "type": "number",
+                        "description": "Severity 0-1",
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["trigger_point", "adhesion", "spasm"],
+                    },
                 },
-                "severity": {
-                    "type": "number",
-                    "description": "Severity 0-1",
-                },
-                "type": {
-                    "type": "string",
-                    "enum": ["trigger_point", "adhesion", "spasm"],
-                },
+                "required": ["meshId", "severity", "type"],
             },
-            "required": ["meshId", "severity", "type"],
         },
     },
     {
-        "name": "create_assessment",
-        "description": (
-            "Create an overall assessment summarizing your findings from this conversation. "
-            "Use this when you have a comprehensive picture and want to record a formal assessment."
-        ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "summary": {
-                    "type": "string",
-                    "description": "Overall assessment summary",
+        "type": "function",
+        "function": {
+            "name": "create_assessment",
+            "description": (
+                "Create an overall assessment summarizing your findings from this conversation. "
+                "Use this when you have a comprehensive picture and want to record a formal assessment."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "summary": {
+                        "type": "string",
+                        "description": "Overall assessment summary",
+                    },
+                    "structuresAffected": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of mesh IDs of affected structures",
+                    },
                 },
-                "structuresAffected": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "List of mesh IDs of affected structures",
-                },
+                "required": ["summary", "structuresAffected"],
             },
-            "required": ["summary", "structuresAffected"],
         },
     },
 ]
@@ -254,67 +268,91 @@ async def chat(request: ChatRequest):
         f"\n\nAvailable muscle mesh IDs (use EXACT names): {json.dumps(mesh_ids)}"
     )
 
-    system = SYSTEM_PROMPT + muscle_context + body_context + mesh_context
+    # Build selected muscle context when user has selected specific muscles
+    selected_context = ""
+    if request.selectedMeshIds:
+        selected_context = "\n\n## Currently Selected Muscles\nThe user has selected the following muscles on the 3D model (focus your diagnosis on these):\n"
+        for mesh_id in request.selectedMeshIds:
+            # Find matching muscle state if it exists
+            state = next((m for m in request.muscleStates if m.meshId == mesh_id), None)
+            if state:
+                parts = [
+                    f"condition={state.condition}",
+                    f"pain={state.pain}/10",
+                    f"strength={state.strength * 100:.0f}%",
+                    f"mobility={state.mobility * 100:.0f}%",
+                ]
+                if state.summary:
+                    parts.append(f'summary="{state.summary}"')
+                selected_context += f"- {mesh_id}: {', '.join(parts)}\n"
+            else:
+                selected_context += f"- {mesh_id}: (no data yet)\n"
 
-    # Build messages array
-    messages: list[anthropic.types.MessageParam] = []
+    system = (
+        SYSTEM_PROMPT + muscle_context + body_context + mesh_context + selected_context
+    )
+
+    # Build messages array with system prompt as first message (OpenAI format)
+    messages: list[dict] = [{"role": "system", "content": system}]
     for msg in request.conversationHistory:
-        messages.append({"role": msg.role, "content": msg.content})  # type: ignore[arg-type]
+        messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": request.message})
 
     async def generate():
-        with client.messages.stream(
-            model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+        stream = await client.chat.completions.create(
+            model=os.getenv("DEDALUS_MODEL", "openai/gpt-5.2"),
             max_tokens=2048,
-            system=system,
             messages=messages,
             tools=TOOLS,
-        ) as stream:
-            tool_calls: list[dict] = []
-            current_tool_input = ""
-            accumulated_text = ""
+            stream=True,
+        )
 
-            for event in stream:
-                if event.type == "content_block_start":
-                    if event.content_block.type == "tool_use":
-                        tool_calls.append(
-                            {
-                                "id": event.content_block.id,
-                                "name": event.content_block.name,
-                                "input": "",
-                            }
-                        )
-                        current_tool_input = ""
-                elif event.type == "content_block_delta":
-                    if event.delta.type == "text_delta":
-                        accumulated_text += event.delta.text
-                        yield f"data: {json.dumps({'type': 'text_delta', 'text': event.delta.text})}\n\n"
-                    elif event.delta.type == "input_json_delta":
-                        current_tool_input += event.delta.partial_json
-                elif event.type == "content_block_stop":
-                    if tool_calls and current_tool_input:
-                        try:
-                            tool_calls[-1]["input"] = json.loads(current_tool_input)
-                        except json.JSONDecodeError:
-                            tool_calls[-1]["input"] = {}
-                        current_tool_input = ""
+        # Accumulate tool calls by index (OpenAI streaming format)
+        tool_calls_by_index: dict[int, dict] = {}
+        accumulated_text = ""
 
-            # Build actions from tool calls
-            actions = [
-                {"name": tc["name"], "params": tc["input"]}
-                for tc in tool_calls
-                if isinstance(tc["input"], dict)
-            ]
+        async for chunk in stream:
+            delta = chunk.choices[0].delta if chunk.choices else None
+            if not delta:
+                continue
 
-            yield f"data: {json.dumps({'type': 'done', 'content': accumulated_text, 'actions': actions})}\n\n"
+            # Text content
+            if delta.content:
+                accumulated_text += delta.content
+                yield f"data: {json.dumps({'type': 'text_delta', 'text': delta.content})}\n\n"
+
+            # Tool calls
+            if delta.tool_calls:
+                for tc_delta in delta.tool_calls:
+                    idx = tc_delta.index
+                    if idx not in tool_calls_by_index:
+                        tool_calls_by_index[idx] = {
+                            "name": "",
+                            "arguments": "",
+                        }
+                    if tc_delta.function and tc_delta.function.name:
+                        tool_calls_by_index[idx]["name"] = tc_delta.function.name
+                    if tc_delta.function and tc_delta.function.arguments:
+                        tool_calls_by_index[idx]["arguments"] += tc_delta.function.arguments
+
+        # Build actions from accumulated tool calls
+        actions = []
+        for tc in tool_calls_by_index.values():
+            try:
+                params = json.loads(tc["arguments"]) if tc["arguments"] else {}
+            except json.JSONDecodeError:
+                params = {}
+            actions.append({"name": tc["name"], "params": params})
+
+        yield f"data: {json.dumps({'type': 'done', 'content': accumulated_text, 'actions': actions})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 @app.post("/generate-workout")
 async def generate_workout(request: GenerateWorkoutRequest):
-    from backend.chains.workout_chain import generate_workout_plan
-    from backend.services.image_gen import generate_all_exercise_images
+    from chains.workout_chain import generate_workout_plan
+    from services.image_gen import generate_all_exercise_images
 
     # 1. Run LangChain chain with RAG summaries + user context
     plan = await generate_workout_plan(
@@ -333,3 +371,9 @@ async def generate_workout(request: GenerateWorkoutRequest):
 
     # 3. Return GeneratedPlan matching Convex schema
     return plan
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

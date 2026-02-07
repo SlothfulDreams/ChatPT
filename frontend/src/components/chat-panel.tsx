@@ -2,14 +2,21 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type ChatAction, type ChatMessage, useChat } from "@/hooks/useChat";
-import { formatMuscleName } from "@/lib/muscle-utils";
+import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
 
 interface ChatPanelProps {
   onClose: () => void;
   onHighlightMuscles?: (meshIds: string[]) => void;
+  selectedMuscles?: Set<string>;
+  onDeselectMuscle?: (meshId: string) => void;
 }
 
-export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
+export function ChatPanel({
+  onClose,
+  onHighlightMuscles,
+  selectedMuscles,
+  onDeselectMuscle,
+}: ChatPanelProps) {
   const {
     messages,
     isStreaming,
@@ -29,6 +36,36 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
   const [titleDraft, setTitleDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Build display entries from selectedMuscles
+  const selectionEntries = (() => {
+    if (!selectedMuscles || selectedMuscles.size === 0) return [];
+    const seen = new Set<string>();
+    const entries: { label: string; meshIds: string[] }[] = [];
+    for (const meshId of selectedMuscles) {
+      if (seen.has(meshId)) continue;
+      const other = getOtherSide(meshId);
+      const hasBoth = selectedMuscles.has(other) && other !== meshId;
+      const name = formatMuscleName(meshId);
+      if (hasBoth) {
+        seen.add(meshId);
+        seen.add(other);
+        entries.push({ label: `${name} (Both)`, meshIds: [meshId, other] });
+      } else {
+        seen.add(meshId);
+        const side = meshId.endsWith("r")
+          ? "R"
+          : meshId.endsWith("l")
+            ? "L"
+            : "";
+        entries.push({
+          label: side ? `${name} (${side})` : name,
+          meshIds: [meshId],
+        });
+      }
+    }
+    return entries;
+  })();
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -57,8 +94,9 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
     const text = input.trim();
     if (!text || isStreaming) return;
     setInput("");
-    sendMessage(text);
-  }, [input, isStreaming, sendMessage]);
+    const meshIds = selectedMuscles ? Array.from(selectedMuscles) : undefined;
+    sendMessage(text, meshIds);
+  }, [input, isStreaming, sendMessage, selectedMuscles]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -222,6 +260,34 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
         </button>
       </div>
 
+      {/* Focus context bar */}
+      {selectionEntries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-4 py-2">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+            Focus
+          </span>
+          {selectionEntries.map((entry) => (
+            <span
+              key={entry.meshIds.join(",")}
+              className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-2 py-0.5 text-[10px] text-blue-300"
+            >
+              {entry.label}
+              {onDeselectMuscle && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    entry.meshIds.forEach((id) => onDeselectMuscle(id))
+                  }
+                  className="ml-0.5 text-blue-300/60 hover:text-blue-300"
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
@@ -260,14 +326,32 @@ export function ChatPanel({ onClose, onHighlightMuscles }: ChatPanelProps) {
               Stop
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={!input.trim()}
-              className="mosaic-btn-primary shrink-0 px-3 py-2 text-xs font-medium"
-            >
-              Send
-            </button>
+            <>
+              {selectionEntries.length > 0 && !input.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const muscleNames = selectionEntries
+                      .map((e) => e.label)
+                      .join(", ");
+                    const prompt = `Please assess the following muscles I've selected: ${muscleNames}. What's your initial evaluation? Ask me any relevant questions about symptoms.`;
+                    const meshIds = Array.from(selectedMuscles ?? []);
+                    sendMessage(prompt, meshIds);
+                  }}
+                  className="shrink-0 rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/30"
+                >
+                  Diagnose
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={!input.trim()}
+                className="mosaic-btn-primary shrink-0 px-3 py-2 text-xs font-medium"
+              >
+                Send
+              </button>
+            </>
           )}
         </div>
       </div>

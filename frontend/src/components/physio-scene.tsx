@@ -144,6 +144,13 @@ export function PhysioScene() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const selectBothSides = true;
 
+  // Auto-open chat when muscles are selected (unless in workout mode)
+  useEffect(() => {
+    if (selectedMuscles.size > 0 && !isWorkoutMode) {
+      setIsChatOpen(true);
+    }
+  }, [selectedMuscles.size, isWorkoutMode]);
+
   // Merge all highlight sets for the 3D model
   const mergedSelectedMuscles = useMemo(() => {
     const merged = new Set(selectedMuscles);
@@ -393,6 +400,19 @@ export function PhysioScene() {
               onHighlightMuscles={(meshIds) =>
                 setChatHighlightMeshIds(new Set(meshIds))
               }
+              selectedMuscles={selectedMuscles}
+              onDeselectMuscle={(meshId) => {
+                setSelectedMuscles((prev) => {
+                  const next = new Set(prev);
+                  next.delete(meshId);
+                  return next;
+                });
+                // Close edit panel if we deselected the muscle being edited
+                if (editingMuscle === meshId) {
+                  setEditingMuscle(null);
+                  setEditPosition(null);
+                }
+              }}
             />
           )}
         </div>
