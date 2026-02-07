@@ -1126,54 +1126,99 @@ function PlanCard({
   onDelete: (id: Id<"workoutPlans">) => void;
   onToggleActive: (plan: WorkoutPlan) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Truncate title to ~30 chars
+  const displayTitle =
+    plan.title.length > 30 ? `${plan.title.slice(0, 27)}...` : plan.title;
+
   return (
     <div
-      className={`group cursor-pointer rounded-lg border p-3 transition-colors hover:bg-white/10 ${
+      className={`group rounded-lg border transition-colors ${
         plan.isActive
           ? "border-emerald-500/20 bg-emerald-500/5"
           : "border-white/5 bg-white/5"
       }`}
-      onClick={() => onSelect(plan._id)}
-      onKeyDown={(e) => e.key === "Enter" && onSelect(plan._id)}
     >
-      <div className="flex items-center gap-2">
+      {/* Compact header - always visible */}
+      <div
+        className="flex cursor-pointer items-center gap-2 p-2 hover:bg-white/5"
+        onClick={() => setExpanded(!expanded)}
+        onKeyDown={(e) => e.key === "Enter" && setExpanded(!expanded)}
+      >
         {plan.isActive && (
           <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
         )}
-        <span className="flex-1 text-xs font-medium">{plan.title}</span>
+        <span
+          className="min-w-0 flex-1 truncate text-xs font-medium"
+          title={plan.title}
+        >
+          {displayTitle}
+        </span>
         {isComplete && (
-          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+          <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
             &#x2714; Done
           </span>
         )}
-        <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleActive(plan);
-            }}
-            className={`rounded px-1.5 py-0.5 text-xs transition-colors ${
-              plan.isActive
-                ? "text-emerald-400/50 hover:text-emerald-400"
-                : "text-white/30 hover:text-white/60"
-            }`}
-          >
-            {plan.isActive ? "Active" : "Activate"}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(plan._id);
-            }}
-            className="rounded px-1.5 py-0.5 text-xs text-red-400/50 transition-colors hover:text-red-400"
-          >
-            Del
-          </button>
-        </div>
+        <svg
+          className={`h-3 w-3 shrink-0 text-white/30 transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
       </div>
-      {plan.notes && <p className="mt-1 text-xs text-white/50">{plan.notes}</p>}
+
+      {/* Expanded content */}
+      {expanded && (
+        <div className="border-t border-white/5 px-2 pb-2 pt-1.5">
+          {plan.notes && (
+            <p className="mb-2 text-xs text-white/50">{plan.notes}</p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleActive(plan);
+              }}
+              className={`rounded px-2 py-1 text-xs transition-colors ${
+                plan.isActive
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-white/10 text-white/60 hover:bg-white/15"
+              }`}
+            >
+              {plan.isActive ? "Active" : "Activate"}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(plan._id);
+              }}
+              className="rounded bg-white/10 px-2 py-1 text-xs text-white/60 transition-colors hover:bg-white/15"
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(plan._id);
+              }}
+              className="rounded px-2 py-1 text-xs text-red-400/50 transition-colors hover:bg-red-500/10 hover:text-red-400"
+            >
+              Del
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

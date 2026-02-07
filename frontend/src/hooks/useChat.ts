@@ -29,13 +29,14 @@ export interface CreateAssessmentAction {
   };
 }
 
-<<<<<<< HEAD
 export interface SelectMusclesAction {
   name: "select_muscles";
   params: {
     meshIds: string[];
     reason: string;
-=======
+  };
+}
+
 export interface CreateWorkoutAction {
   name: "create_workout";
   params: {
@@ -51,18 +52,14 @@ export interface CreateWorkoutAction {
       notes?: string;
       targetMeshIds?: string[];
     }[];
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
   };
 }
 
 export type ChatAction =
   | UpdateMuscleAction
   | CreateAssessmentAction
-<<<<<<< HEAD
-  | SelectMusclesAction;
-=======
+  | SelectMusclesAction
   | CreateWorkoutAction;
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
 
 export interface AgentSubstep {
   tool: string;
@@ -249,9 +246,6 @@ export function useChat(
 
       await markActionsApplied({ messageId });
     },
-<<<<<<< HEAD
-    [body, muscles, upsertMuscle, markActionsApplied, onSelectMuscles],
-=======
     [
       body,
       user,
@@ -259,8 +253,8 @@ export function useChat(
       createWorkoutPlan,
       addExercise,
       markActionsApplied,
+      onSelectMuscles,
     ],
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
   );
 
   // Send a message

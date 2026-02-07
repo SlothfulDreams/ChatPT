@@ -333,7 +333,6 @@ _ACTION_TOOLS: list[ToolSpec] = [
         },
     ),
     ToolSpec(
-<<<<<<< HEAD
         name="select_muscles",
         kind=ToolKind.ACTION,
         step_label="Selecting muscles on model",
@@ -349,23 +348,10 @@ _ACTION_TOOLS: list[ToolSpec] = [
                     "This REPLACES the entire current selection. "
                     "For bilateral symptoms, include BOTH sides (e.g. both 'Deltoidl' and 'Deltoidl_1'). "
                     "Only use mesh IDs from the available list."
-=======
-        name="create_workout",
-        kind=ToolKind.ACTION,
-        step_label="Creating workout plan",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "create_workout",
-                "description": (
-                    "Create a workout plan with exercises. Use this when the user asks for a workout, "
-                    "training routine, or exercise program. The workout will be saved to their workout plans."
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
                 ),
                 "parameters": {
                     "type": "object",
                     "properties": {
-<<<<<<< HEAD
                         "meshIds": {
                             "type": "array",
                             "items": {"type": "string"},
@@ -380,7 +366,25 @@ _ACTION_TOOLS: list[ToolSpec] = [
                         },
                     },
                     "required": ["meshIds", "reason"],
-=======
+                },
+            },
+        },
+    ),
+    ToolSpec(
+        name="create_workout",
+        kind=ToolKind.ACTION,
+        step_label="Creating workout plan",
+        schema={
+            "type": "function",
+            "function": {
+                "name": "create_workout",
+                "description": (
+                    "Create a workout plan with exercises. Use this when the user asks for a workout, "
+                    "training routine, or exercise program. The workout will be saved to their workout plans."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
                         "title": {
                             "type": "string",
                             "description": "Title for the workout plan (e.g., 'Upper Body Strength', 'Shoulder Rehab')",
@@ -435,7 +439,6 @@ _ACTION_TOOLS: list[ToolSpec] = [
                         },
                     },
                     "required": ["title", "exercises"],
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
                 },
             },
         },

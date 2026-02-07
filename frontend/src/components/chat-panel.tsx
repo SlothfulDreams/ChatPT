@@ -552,8 +552,8 @@ function MessageBubble({
 function StepsIndicator({ steps }: { steps: AgentStep[] }) {
   return (
     <div className="mb-2 space-y-1 border-b border-white/5 pb-2">
-      {steps.map((step) => (
-        <div key={step.tool}>
+      {steps.map((step, i) => (
+        <div key={`${step.tool}-${i}`}>
           <div className="flex items-center gap-1.5 text-[10px] text-white/50">
             {step.status === "running" ? (
               <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-white/20 border-t-white/60" />
@@ -565,9 +565,9 @@ function StepsIndicator({ steps }: { steps: AgentStep[] }) {
           {/* Nested substeps (research sub-agent tool calls) */}
           {step.substeps && step.substeps.length > 0 && (
             <div className="ml-4 mt-0.5 space-y-0.5">
-              {step.substeps.map((sub) => (
+              {step.substeps.map((sub, j) => (
                 <div
-                  key={sub.tool}
+                  key={`${sub.tool}-${j}`}
                   className="flex items-center gap-1.5 text-[10px] text-white/25"
                 >
                   {sub.status === "running" ? (
@@ -605,13 +605,10 @@ function ActionChip({
         return `Updated ${formatMuscleName(action.params.meshId)}`;
       case "create_assessment":
         return "Assessment created";
-<<<<<<< HEAD
       case "select_muscles":
         return `Selected ${action.params.meshIds.length} muscles`;
-=======
       case "create_workout":
         return `Workout created: ${action.params.title}`;
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
     }
   })();
 
@@ -621,13 +618,10 @@ function ActionChip({
         return [action.params.meshId];
       case "create_assessment":
         return action.params.structuresAffected;
-<<<<<<< HEAD
       case "select_muscles":
         return action.params.meshIds;
-=======
       case "create_workout":
         return action.params.exercises.flatMap((e) => e.targetMeshIds ?? []);
->>>>>>> 4ac3fb3 (workout in chat goes to convex)
       default:
         return [];
     }
