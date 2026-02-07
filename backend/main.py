@@ -60,6 +60,7 @@ class MessageInput(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    conversationId: str | None = None
     conversationHistory: list[MessageInput]
     muscleStates: list[MuscleContext]
     body: BodyContext | None = None
@@ -333,7 +334,9 @@ async def chat(request: ChatRequest):
                     if tc_delta.function and tc_delta.function.name:
                         tool_calls_by_index[idx]["name"] = tc_delta.function.name
                     if tc_delta.function and tc_delta.function.arguments:
-                        tool_calls_by_index[idx]["arguments"] += tc_delta.function.arguments
+                        tool_calls_by_index[idx]["arguments"] += (
+                            tc_delta.function.arguments
+                        )
 
         # Build actions from accumulated tool calls
         actions = []
