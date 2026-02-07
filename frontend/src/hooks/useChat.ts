@@ -73,7 +73,7 @@ interface MuscleContext {
 // Hook
 // ============================================
 
-export function useChat() {
+export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
   const user = useQuery(api.users.current);
   const body = useQuery(
     api.body.getByUser,
@@ -239,7 +239,10 @@ export function useChat() {
         }
       }
 
-      const availableMeshIds = (muscles ?? []).map((m) => m.meshId);
+      const availableMeshIds =
+        allMeshIds && allMeshIds.length > 0
+          ? allMeshIds
+          : (muscles ?? []).map((m) => m.meshId);
 
       // Start streaming
       setIsStreaming(true);
@@ -269,6 +272,7 @@ export function useChat() {
                 : null,
               availableMeshIds,
               selectedMeshIds: selectedMeshIds ?? [],
+              activeGroups: activeGroups ? Array.from(activeGroups) : [],
             }),
             signal: abort.signal,
           },
@@ -363,6 +367,8 @@ export function useChat() {
       user,
       body,
       muscles,
+      allMeshIds,
+      activeGroups,
       isStreaming,
       activeConversation,
       storedMessages,

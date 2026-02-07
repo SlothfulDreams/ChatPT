@@ -153,6 +153,7 @@ interface MuscleModelProps {
   onMuscleHover?: (muscleId: string | null) => void;
   workoutHighlightMeshIds?: Set<string>;
   visualOverrides?: Record<string, MuscleVisualOverride>;
+  onMeshIdsExtracted?: (meshIds: string[]) => void;
 }
 
 // ============================================
@@ -171,15 +172,32 @@ export function MuscleModel({
   onMuscleHover,
   workoutHighlightMeshIds,
   visualOverrides,
+  onMeshIdsExtracted,
 }: MuscleModelProps) {
   const { scene } = useGLTF("/models/myological_body.gltf");
   const groupRef = useRef<THREE.Group>(null);
+  const meshIdsExtractedRef = useRef(false);
   const targetRotationY = isFrontView ? 0 : Math.PI;
 
   const clonedScene = useMemo(() => {
     scene.updateMatrixWorld(true);
     return SkeletonUtils.clone(scene) as THREE.Group;
   }, [scene]);
+
+  // Extract all valid mesh IDs from the GLTF scene for the chat AI
+  useEffect(() => {
+    if (meshIdsExtractedRef.current || !onMeshIdsExtracted) return;
+    const ids: string[] = [];
+    clonedScene.traverse((child) => {
+      if (!(child as THREE.Mesh).isMesh) return;
+      if (shouldHideMesh(child.name)) return;
+      ids.push(child.name);
+    });
+    if (ids.length > 0) {
+      meshIdsExtractedRef.current = true;
+      onMeshIdsExtracted(ids);
+    }
+  }, [clonedScene, onMeshIdsExtracted]);
 
   // Rotation lerp
   useFrame(() => {

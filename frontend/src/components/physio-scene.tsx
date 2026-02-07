@@ -199,6 +199,9 @@ export function PhysioScene() {
     Set<string>
   >(new Set());
 
+  // All mesh IDs from the GLTF model (for chat AI)
+  const [allMeshIds, setAllMeshIds] = useState<string[]>([]);
+
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
 
@@ -418,6 +421,7 @@ export function PhysioScene() {
                 : undefined
             }
             visualOverrides={visualOverrides}
+            onMeshIdsExtracted={setAllMeshIds}
           />
 
           <OrbitControls
@@ -493,6 +497,8 @@ export function PhysioScene() {
                 setChatHighlightMeshIds(new Set(meshIds))
               }
               selectedMuscles={selectedMuscles}
+              allMeshIds={allMeshIds}
+              activeGroups={activeGroups}
               onDeselectMuscle={(meshId) => {
                 setSelectedMuscles((prev) => {
                   const next = new Set(prev);

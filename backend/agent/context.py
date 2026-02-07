@@ -15,6 +15,7 @@ def build_context(
     body: Any | None,
     available_mesh_ids: list[str],
     selected_mesh_ids: list[str] | None = None,
+    active_groups: list[str] | None = None,
 ) -> str:
     """Build dynamic context string appended to the system prompt.
 
@@ -72,6 +73,16 @@ def build_context(
                 lines.append(_format_muscle(state))
             else:
                 lines.append(f"- {mesh_id}: (no data yet)")
+        parts.append("\n".join(lines))
+
+    # Active muscle groups
+    if active_groups:
+        labels = [g.replace("_", " ").title() for g in active_groups]
+        lines = [
+            "\n\n## Active Muscle Groups",
+            f"The user is currently focused on these muscle groups in the 3D model: {', '.join(labels)}",
+            'When the user says "this hurts" or refers to a body area without being specific, assume they mean muscles in these groups.',
+        ]
         parts.append("\n".join(lines))
 
     return "".join(parts)

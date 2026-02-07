@@ -69,6 +69,7 @@ class ChatRequest(BaseModel):
     body: BodyContext | None = None
     availableMeshIds: list[str]
     selectedMeshIds: list[str] = []
+    activeGroups: list[str] = []
 
 
 # ============================================
@@ -88,6 +89,7 @@ async def chat(request: ChatRequest):
         body=request.body.model_dump() if request.body else None,
         available_mesh_ids=request.availableMeshIds,
         selected_mesh_ids=request.selectedMeshIds,
+        active_groups=request.activeGroups,
     )
 
     messages: list[dict] = [{"role": "system", "content": system}]

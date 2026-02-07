@@ -11,6 +11,7 @@ import {
   useChat,
 } from "@/hooks/useChat";
 import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
+import { MUSCLE_GROUP_LABELS, type MuscleGroup } from "@/types/muscle-groups";
 
 const markdownComponents: Components = {
   p: ({ children }) => (
@@ -69,6 +70,8 @@ interface ChatPanelProps {
   onClose: () => void;
   onHighlightMuscles?: (meshIds: string[]) => void;
   selectedMuscles?: Set<string>;
+  allMeshIds?: string[];
+  activeGroups?: Set<MuscleGroup>;
   onDeselectMuscle?: (meshId: string) => void;
 }
 
@@ -76,6 +79,8 @@ export function ChatPanel({
   onClose,
   onHighlightMuscles,
   selectedMuscles,
+  allMeshIds,
+  activeGroups,
   onDeselectMuscle,
 }: ChatPanelProps) {
   const {
@@ -90,7 +95,7 @@ export function ChatPanel({
     conversations,
     activeConversationId,
     conversationTitle,
-  } = useChat();
+  } = useChat(allMeshIds, activeGroups);
   const [input, setInput] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -322,11 +327,21 @@ export function ChatPanel({
       </div>
 
       {/* Focus context bar */}
-      {selectionEntries.length > 0 && (
+      {(selectionEntries.length > 0 ||
+        (activeGroups && activeGroups.size > 0)) && (
         <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-4 py-2">
           <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">
             Focus
           </span>
+          {activeGroups &&
+            Array.from(activeGroups).map((group) => (
+              <span
+                key={`group-${group}`}
+                className="inline-flex items-center gap-1 rounded-full bg-teal-500/20 px-2 py-0.5 text-[10px] text-teal-300"
+              >
+                {MUSCLE_GROUP_LABELS[group]}
+              </span>
+            ))}
           {selectionEntries.map((entry) => (
             <span
               key={entry.meshIds.join(",")}
