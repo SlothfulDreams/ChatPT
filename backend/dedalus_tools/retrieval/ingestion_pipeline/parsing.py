@@ -1,30 +1,45 @@
-"""Document parsing via Docling.
+"""Document parsing via PyMuPDF with OCR fallback.
 
-Provides unified extraction for PDFs, DOCX, and other document formats
-using a singleton DocumentConverter.
+Uses pymupdf4llm for text-based PDFs. Falls back to pytesseract OCR
+for scanned/image-based PDFs that yield no extractable text.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from docling.document_converter import DocumentConverter
+import pymupdf
+import pymupdf4llm
 
-_converter: DocumentConverter | None = None
 
+def _ocr_pdf(path: Path) -> str:
+    """Extract text from a scanned/image PDF using pytesseract OCR.
 
-def _get_converter() -> DocumentConverter:
-    """Get or create the singleton DocumentConverter."""
-    global _converter
-    if _converter is None:
-        _converter = DocumentConverter()
-    return _converter
+    Renders each page as a high-DPI image and runs tesseract on it.
+    """
+    from PIL import Image
+    import pytesseract
+    import io
+
+    doc = pymupdf.open(str(path))
+    pages_text: list[str] = []
+
+    for page_num in range(len(doc)):
+        page = doc[page_num]
+        # Render at 300 DPI for good OCR accuracy
+        pix = page.get_pixmap(dpi=300)
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
+        text = pytesseract.image_to_string(img)
+        if text.strip():
+            pages_text.append(text.strip())
+
+    doc.close()
+    return "\n\n".join(pages_text)
 
 
 def extract_document(path: str | Path, output_path: str | Path | None = None) -> str:
-    """Extract text from a document using Docling.
-
-    Supports PDF, DOCX, PPTX, HTML, and other formats via Docling.
+    """Extract text from a document as markdown using PyMuPDF,
+    falling back to OCR for scanned/image-based PDFs.
 
     Args:
         path: Path to the document file.
@@ -37,9 +52,11 @@ def extract_document(path: str | Path, output_path: str | Path | None = None) ->
     if not path.exists():
         raise FileNotFoundError(f"Document not found: {path}")
 
-    converter = _get_converter()
-    result = converter.convert(str(path))
-    markdown = result.document.export_to_markdown()
+    markdown = pymupdf4llm.to_markdown(str(path))
+
+    # Fallback: if pymupdf extracted nothing useful, try OCR
+    if len(markdown.strip()) < 50 and path.suffix.lower() == ".pdf":
+        markdown = _ocr_pdf(path)
 
     if output_path:
         output_path = Path(output_path)
@@ -51,49 +68,20 @@ def extract_document(path: str | Path, output_path: str | Path | None = None) ->
 
 def extract_pdf(
     path: str | Path,
-    method: str = "docling",
+    method: str = "pymupdf",
     output_path: str | Path | None = None,
 ) -> str:
-    """Extract text from a PDF (backward-compatible wrapper).
+    """Backward-compatible wrapper for PDF extraction.
 
     Args:
         path: Path to the PDF file.
-        method: Extraction method. Only "docling" is supported.
+        method: Extraction method (ignored, always uses pymupdf).
         output_path: Optional path to write extracted markdown.
 
     Returns:
         Extracted text as markdown string.
     """
-    if method != "docling":
-        raise ValueError(f"Unsupported extraction method: {method}. Use 'docling'.")
     return extract_document(path, output_path)
-
-
-def extract_tables(path: str | Path) -> list[dict]:
-    """Extract structured tables from a document.
-
-    Args:
-        path: Path to the document file.
-
-    Returns:
-        List of table dicts with 'headers' and 'rows' keys.
-    """
-    path = Path(path)
-    if not path.exists():
-        raise FileNotFoundError(f"Document not found: {path}")
-
-    converter = _get_converter()
-    result = converter.convert(str(path))
-
-    tables = []
-    for table in result.document.tables:
-        table_data = table.export_to_dataframe()
-        tables.append({
-            "headers": list(table_data.columns),
-            "rows": table_data.values.tolist(),
-        })
-
-    return tables
 
 
 if __name__ == "__main__":

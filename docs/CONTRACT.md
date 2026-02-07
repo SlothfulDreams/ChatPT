@@ -1,19 +1,39 @@
-# HyDE Embedding + Search Contract
+# Template-Wrapped Chunk Embedding + Search Contract
 
 Single source of truth for what goes into Qdrant and what comes out.
 
 ## Architecture
 
 ```
-PDF -> Docling -> Markdown -> Agentic Chunking (Groq LLM) -> HyDE Embedding -> Qdrant
+PDF -> PyMuPDF -> Markdown -> Agentic Chunking (Groq LLM) -> Template-Wrap per content_type -> Embed -> Qdrant
                                     |
                         [chunks.json -- inspect here]
 ```
 
-**HyDE**: We embed hypothetical questions, not the chunk text itself.
-Each chunk produces 8-10 questions via LLM. At query time, the user's
-question matches against these question embeddings (same semantic space),
-then we return the parent chunk text. Results are deduplicated by chunk_id.
+**Template-wrapped embedding**: Each chunk's text is wrapped in a content_type-specific
+template before embedding. The template adds semantic context about *what kind* of
+content the chunk is (exercise technique, pathology, anatomy, etc.), so the vector
+captures the role of the content -- not just what it says. Raw text (without template)
+is stored in the payload for retrieval. 1 vector per chunk. At query time, normal
+`embed_query()` with Nomic's `search_query:` prefix.
+
+---
+
+## Embedding Templates
+
+Each `content_type` wraps the chunk text differently before embedding:
+
+| content_type | Template prefix |
+|---|---|
+| `exercise_technique` | "Exercise technique and execution. Proper form, posture, and movement cues." |
+| `rehab_protocol` | "Rehabilitation protocol and treatment progression. Recovery phases, criteria, and therapeutic interventions." |
+| `pathology` | "Clinical condition and diagnosis. Injury mechanism, signs and symptoms, assessment findings." |
+| `assessment` | "Clinical assessment and diagnostic testing. Physical examination procedure, patient instructions, and interpretation." |
+| `anatomy` | "Anatomical structure and function. Muscle origins, insertions, innervation, and biomechanical role." |
+| `training_principles` | "Training and programming principles. Load management, periodization, and evidence-based guidelines." |
+| `reference_data` | "Reference data and normative values. Clinical benchmarks, measurement standards, and statistical ranges." |
+
+Unknown content types get no prefix (raw text only).
 
 ---
 
@@ -23,18 +43,11 @@ What `chunks.json` looks like after Stage 2:
 
 ```json
 {
-  "chunk_id": "uuid",
   "text": "The original document text for this chunk...",
   "muscle_groups": ["rotator_cuff", "shoulders"],
   "conditions": ["impingement", "rotator cuff tear"],
   "exercises": ["external rotation", "face pull"],
   "content_type": "exercise_technique",
-  "hypothetical_questions": [
-    "What exercises strengthen the rotator cuff?",
-    "How do I perform external rotation for shoulder rehab?",
-    "What is the proper form for face pulls?",
-    "..."
-  ],
   "summary": "External rotation and face pull exercises for rotator cuff rehab."
 }
 ```
@@ -102,17 +115,15 @@ Lowercase exercise names extracted by the LLM. Examples:
 
 ## Qdrant Point Schema (what gets stored)
 
-Each hypothetical question becomes one point. All questions from the
-same chunk share a `chunk_id`.
+One point per chunk. The vector is the embedding of the template-wrapped text;
+the payload stores the raw text.
 
 ```
 Point {
-  id:     uuid            // unique per question
-  vector: float[768]      // nomic-embed-text-v1.5 of the hypothetical question
+  id:     uuid            // unique per chunk
+  vector: float[768]      // nomic-embed-text-v1.5 of template-wrapped chunk text
   payload: {
-    question:      string       // the hypothetical question (what's embedded)
-    chunk_text:    string       // the original chunk text (what's returned)
-    chunk_id:      string       // groups questions from the same chunk
+    text:          string       // the raw chunk text (what's returned)
     source:        string       // filename (e.g. "strength_and_conditioning.pdf")
     muscle_groups: string[]     // enum values from shared/muscle_groups.json
     conditions:    string[]     // free-form clinical conditions
@@ -123,7 +134,7 @@ Point {
 }
 ```
 
-**Collection**: `physio-knowledge-base-v2`
+**Collection**: `physio-knowledge-base-v3`
 **Embedding**: Nomic v1.5 (768d), prefixed with `search_document:` for docs, `search_query:` for queries
 **Distance**: Cosine
 
@@ -135,22 +146,19 @@ muscle_groups -> KEYWORD
 conditions    -> KEYWORD
 exercises     -> KEYWORD
 content_type  -> KEYWORD
-chunk_id      -> KEYWORD
 ```
 
 ---
 
 ## Search Response Schema (what comes back)
 
-After deduplication by `chunk_id` (keep highest score per chunk):
+1:1 point-to-chunk, no deduplication needed:
 
 ```json
 {
   "id": "point-uuid",
-  "chunk_id": "chunk-uuid",
   "score": 0.95,
   "text": "The original chunk text...",
-  "question": "The hypothetical question that matched",
   "source": "strength_and_conditioning.pdf",
   "muscle_groups": ["rotator_cuff", "shoulders"],
   "conditions": ["impingement"],

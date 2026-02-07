@@ -17,7 +17,7 @@ from qdrant_client.http.models import (
 
 from .ingestion_pipeline.embedding import get_embedding_dim
 
-COLLECTION_NAME = "physio-knowledge-base-v2"
+COLLECTION_NAME = "physio-knowledge-base-v3"
 
 _client: QdrantClient | None = None
 
@@ -76,7 +76,6 @@ def ensure_collection(
             ("conditions", PayloadSchemaType.KEYWORD),
             ("exercises", PayloadSchemaType.KEYWORD),
             ("content_type", PayloadSchemaType.KEYWORD),
-            ("chunk_id", PayloadSchemaType.KEYWORD),
         ]
         for field_name, field_type in indexes:
             client.create_payload_index(

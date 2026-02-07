@@ -67,13 +67,6 @@ class ChunkAnalysis(BaseModel):
     conditions: list[str] = Field(default_factory=list)
     exercises: list[str] = Field(default_factory=list)
     content_type: ContentType = "training_principles"
-    hypothetical_questions: list[str] = Field(
-        default_factory=list,
-        description=(
-            "8-10 questions a clinician, patient, or student might ask "
-            "that this text answers. Be specific and diverse."
-        ),
-    )
     summary: str = Field(default="")
 
 
@@ -96,12 +89,6 @@ CONTENT TYPE - classify as exactly one of:
 - anatomy: structural descriptions, muscle origins/insertions, biomechanics
 - training_principles: programming, periodization, load management, general training guidelines
 - reference_data: norms tables, ranges, statistical data
-
-HYPOTHETICAL QUESTIONS:
-Generate 8-10 diverse questions that someone might ask where this text would be a good answer.
-- Use specific anatomical/clinical terms, not pronouns
-- Vary types: factual recall, how-to, clinical reasoning, comparison, when/why questions
-- Write from the perspective of: clinicians, patients, students, coaches
 
 CONDITIONS: Extract any clinical conditions, injuries, or diagnoses mentioned (free-form, lowercase).
 EXERCISES: Extract any specific exercises mentioned (free-form, lowercase).
@@ -128,7 +115,7 @@ def _analyze_chunk(text: str) -> ChunkAnalysis:
         text: The chunk text to analyze.
 
     Returns:
-        ChunkAnalysis with decision, metadata, and hypothetical questions.
+        ChunkAnalysis with decision and metadata.
     """
     client = _get_groq_client()
     return client.chat.completions.create(
@@ -162,7 +149,7 @@ def agentic_chunk(
 
     Returns:
         List of dicts with keys: text, muscle_groups, conditions,
-        exercises, content_type, hypothetical_questions, summary.
+        exercises, content_type, summary.
         Only chunks with decision="embed" are included.
     """
     splitter = TextSplitter(capacity=max_characters, overlap=overlap)
@@ -199,7 +186,6 @@ def agentic_chunk(
                     "conditions": analysis.conditions,
                     "exercises": analysis.exercises,
                     "content_type": analysis.content_type,
-                    "hypothetical_questions": analysis.hypothetical_questions,
                     "summary": analysis.summary,
                 }
             )
@@ -212,9 +198,6 @@ def agentic_chunk(
                     "conditions": [],
                     "exercises": [],
                     "content_type": "training_principles",
-                    "hypothetical_questions": [
-                        "What information does this passage contain about physical therapy?"
-                    ],
                     "summary": "",
                 }
             )

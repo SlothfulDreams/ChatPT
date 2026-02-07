@@ -16,8 +16,8 @@ Usage:
 
 Outputs land in docs/processed/<filename>/:
     parsed.md       -- full markdown extracted from the document
-    chunks.json     -- all chunks with metadata + hypothetical questions
-    manifest.json   -- pipeline stats (chunk count, question count, etc.)
+    chunks.json     -- all chunks with metadata
+    manifest.json   -- pipeline stats (chunk count, content types, etc.)
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def _parse(pdf_path: Path, out_dir: Path) -> str:
 
 
 def _chunk(markdown: str, out_dir: Path) -> list[dict]:
-    """Stage 2: Markdown -> Chunks with metadata + hypothetical questions."""
+    """Stage 2: Markdown -> Chunks with metadata."""
     from backend.dedalus_tools.retrieval.ingestion_pipeline.chunking import (
         agentic_chunk,
     )
@@ -66,16 +66,11 @@ def _chunk(markdown: str, out_dir: Path) -> list[dict]:
     chunks = agentic_chunk(markdown)
     elapsed = time.time() - t0
 
-    # Assign chunk_ids for traceability
-    for chunk in chunks:
-        chunk["chunk_id"] = str(uuid.uuid4())
-
     chunks_path = out_dir / "chunks.json"
     chunks_path.write_text(
         json.dumps(chunks, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
-    total_questions = sum(len(c.get("hypothetical_questions", [])) for c in chunks)
     muscle_groups_seen = set()
     content_types_seen = set()
     for c in chunks:
@@ -84,8 +79,6 @@ def _chunk(markdown: str, out_dir: Path) -> list[dict]:
 
     manifest = {
         "chunks": len(chunks),
-        "total_hypothetical_questions": total_questions,
-        "avg_questions_per_chunk": round(total_questions / max(len(chunks), 1), 1),
         "muscle_groups_found": sorted(muscle_groups_seen),
         "content_types_found": sorted(content_types_seen),
         "chunking_time_s": round(elapsed, 1),
@@ -95,14 +88,14 @@ def _chunk(markdown: str, out_dir: Path) -> list[dict]:
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
-    print(f"[chunk] {len(chunks)} chunks, {total_questions} questions -> {chunks_path}  ({elapsed:.1f}s)")
+    print(f"[chunk] {len(chunks)} chunks -> {chunks_path}  ({elapsed:.1f}s)")
     print(f"[chunk] Muscle groups: {', '.join(sorted(muscle_groups_seen)) or 'none'}")
     print(f"[chunk] Content types: {', '.join(sorted(content_types_seen)) or 'none'}")
     return chunks
 
 
 def _embed(chunks: list[dict], source: str) -> None:
-    """Stage 3: Embed hypothetical questions and upsert to Qdrant."""
+    """Stage 3: Template-wrap chunks per content_type, embed, upsert to Qdrant."""
     from qdrant_client.http.models import PointStruct
 
     from backend.dedalus_tools.retrieval.client import (
@@ -113,34 +106,34 @@ def _embed(chunks: list[dict], source: str) -> None:
     from backend.dedalus_tools.retrieval.ingestion_pipeline.embedding import (
         embed_documents,
     )
+    from backend.dedalus_tools.retrieval.ingestion_pipeline.ingest import (
+        _template_wrap,
+    )
 
     print(f"[embed] Embedding into Qdrant collection '{COLLECTION_NAME}' ...")
     t0 = time.time()
     ensure_collection()
 
+    # Template-wrap each chunk per its content_type, then embed
+    wrapped_texts = [
+        _template_wrap(c["text"], c.get("content_type", ""))
+        for c in chunks
+    ]
+    vectors = embed_documents(wrapped_texts)
+
     points: list[PointStruct] = []
-    for chunk in chunks:
-        chunk_id = chunk.get("chunk_id", str(uuid.uuid4()))
-        questions = chunk.get("hypothetical_questions", [])
-        if not questions:
-            questions = [f"What does this text discuss: {chunk['text'][:100]}?"]
-
-        question_vectors = embed_documents(questions)
-
-        for question_text, vector in zip(questions, question_vectors):
-            point_id = str(uuid.uuid4())
-            payload = {
-                "question": question_text,
-                "chunk_text": chunk["text"],
-                "chunk_id": chunk_id,
-                "source": source,
-                "muscle_groups": chunk.get("muscle_groups", []),
-                "conditions": chunk.get("conditions", []),
-                "exercises": chunk.get("exercises", []),
-                "content_type": chunk.get("content_type", ""),
-                "summary": chunk.get("summary", ""),
-            }
-            points.append(PointStruct(id=point_id, vector=vector, payload=payload))
+    for chunk, vector in zip(chunks, vectors):
+        point_id = str(uuid.uuid4())
+        payload = {
+            "text": chunk["text"],
+            "source": source,
+            "muscle_groups": chunk.get("muscle_groups", []),
+            "conditions": chunk.get("conditions", []),
+            "exercises": chunk.get("exercises", []),
+            "content_type": chunk.get("content_type", ""),
+            "summary": chunk.get("summary", ""),
+        }
+        points.append(PointStruct(id=point_id, vector=vector, payload=payload))
 
     client = get_client()
     batch_size = 100

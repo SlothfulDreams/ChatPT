@@ -1,6 +1,6 @@
 """PTRetriever: vector retrieval for physical therapy knowledge.
 
-Wraps Qdrant search with HyDE-based chunk deduplication,
+Wraps Qdrant search with template-wrapped chunk embeddings,
 supporting filtered search by muscle group, condition, content type, and exercise.
 """
 
@@ -17,7 +17,7 @@ from .ingestion_pipeline.embedding import embed_query
 
 
 class PTRetriever:
-    """Physical therapy knowledge retriever with HyDE chunk dedup."""
+    """Physical therapy knowledge retriever."""
 
     def __init__(
         self,
@@ -26,16 +26,6 @@ class PTRetriever:
     ):
         self.collection_name = collection_name
         self.top_k = top_k
-
-    def _deduplicate_by_chunk(self, results: list[dict], top_k: int) -> list[dict]:
-        """Deduplicate results by chunk_id, keeping highest score per chunk."""
-        seen: dict[str, dict] = {}
-        for r in results:
-            cid = r.get("chunk_id", r["id"])
-            if cid not in seen or r["score"] > seen[cid]["score"]:
-                seen[cid] = r
-        deduped = sorted(seen.values(), key=lambda x: x["score"], reverse=True)
-        return deduped[:top_k]
 
     def search(
         self,
@@ -62,19 +52,16 @@ class PTRetriever:
         results = client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=top_k * 3,
+            limit=top_k,
             query_filter=qdrant_filter,
         )
 
-        formatted = [self._format_result(r) for r in results]
-        return self._deduplicate_by_chunk(formatted, top_k)
+        return [self._format_result(r) for r in results]
 
     def search_by_muscle_group(
         self, group: str, top_k: int | None = None
     ) -> list[dict]:
         """Search for content related to a specific muscle group.
-
-        Uses the muscle_groups metadata field (constrained enum).
 
         Args:
             group: Muscle group name.
@@ -97,12 +84,11 @@ class PTRetriever:
         results = client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=top_k * 3,
+            limit=top_k,
             query_filter=qdrant_filter,
         )
 
-        formatted = [self._format_result(r) for r in results]
-        return self._deduplicate_by_chunk(formatted, top_k)
+        return [self._format_result(r) for r in results]
 
     def search_by_condition(
         self, condition: str, top_k: int | None = None
@@ -132,12 +118,11 @@ class PTRetriever:
         results = client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=top_k * 3,
+            limit=top_k,
             query_filter=qdrant_filter,
         )
 
-        formatted = [self._format_result(r) for r in results]
-        return self._deduplicate_by_chunk(formatted, top_k)
+        return [self._format_result(r) for r in results]
 
     def search_by_content_type(
         self, content_type: str, query: str, top_k: int | None = None
@@ -165,12 +150,11 @@ class PTRetriever:
         results = client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=top_k * 3,
+            limit=top_k,
             query_filter=qdrant_filter,
         )
 
-        formatted = [self._format_result(r) for r in results]
-        return self._deduplicate_by_chunk(formatted, top_k)
+        return [self._format_result(r) for r in results]
 
     def search_by_exercise(self, exercise: str, top_k: int | None = None) -> list[dict]:
         """Search for content related to a specific exercise.
@@ -195,12 +179,11 @@ class PTRetriever:
         results = client.search(
             collection_name=self.collection_name,
             query_vector=query_vector,
-            limit=top_k * 3,
+            limit=top_k,
             query_filter=qdrant_filter,
         )
 
-        formatted = [self._format_result(r) for r in results]
-        return self._deduplicate_by_chunk(formatted, top_k)
+        return [self._format_result(r) for r in results]
 
     @staticmethod
     def _build_filter(filters: dict) -> Filter:
@@ -232,10 +215,8 @@ class PTRetriever:
         payload = result.payload or {}
         return {
             "id": str(result.id),
-            "chunk_id": payload.get("chunk_id", ""),
             "score": result.score,
-            "text": payload.get("chunk_text", payload.get("text", "")),
-            "question": payload.get("question", ""),
+            "text": payload.get("text", ""),
             "source": payload.get("source", ""),
             "muscle_groups": payload.get("muscle_groups", []),
             "conditions": payload.get("conditions", []),

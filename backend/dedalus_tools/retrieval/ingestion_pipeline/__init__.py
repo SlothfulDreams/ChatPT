@@ -1,4 +1,4 @@
-from .parsing import extract_document, extract_pdf, extract_tables
+from .parsing import extract_document, extract_pdf
 from .chunking import agentic_chunk
 from .embedding import embed_documents, embed_query, get_embedding_dim
 

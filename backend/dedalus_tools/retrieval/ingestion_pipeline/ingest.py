@@ -1,6 +1,6 @@
 """End-to-end ingestion pipeline.
 
-Parse -> Chunk -> Embed hypothetical questions -> Upsert to Qdrant.
+Parse -> Chunk -> Template-wrap per content_type -> Embed -> Upsert to Qdrant.
 """
 
 from __future__ import annotations
@@ -15,17 +15,67 @@ from .chunking import agentic_chunk
 from .embedding import embed_documents
 from .parsing import extract_document, extract_pdf
 
+# ---------------------------------------------------------------------------
+# Content-type-specific embedding templates
+# ---------------------------------------------------------------------------
+# Each template prepends semantic context to the chunk text before embedding,
+# so the resulting vector captures *what kind* of content it is -- not just
+# what it says.  The raw text (without template) is stored in the payload.
+
+_EMBEDDING_TEMPLATES: dict[str, str] = {
+    "exercise_technique": (
+        "Exercise technique and execution. Proper form, posture, and movement cues. "
+        "{text}"
+    ),
+    "rehab_protocol": (
+        "Rehabilitation protocol and treatment progression. Recovery phases, criteria, "
+        "and therapeutic interventions. {text}"
+    ),
+    "pathology": (
+        "Clinical condition and diagnosis. Injury mechanism, signs and symptoms, "
+        "assessment findings. {text}"
+    ),
+    "assessment": (
+        "Clinical assessment and diagnostic testing. Physical examination procedure, "
+        "patient instructions, and interpretation. {text}"
+    ),
+    "anatomy": (
+        "Anatomical structure and function. Muscle origins, insertions, innervation, "
+        "and biomechanical role. {text}"
+    ),
+    "training_principles": (
+        "Training and programming principles. Load management, periodization, "
+        "and evidence-based guidelines. {text}"
+    ),
+    "reference_data": (
+        "Reference data and normative values. Clinical benchmarks, measurement "
+        "standards, and statistical ranges. {text}"
+    ),
+}
+_DEFAULT_TEMPLATE = "{text}"
+
+
+def _template_wrap(text: str, content_type: str) -> str:
+    """Wrap chunk text in its content_type-specific embedding template."""
+    template = _EMBEDDING_TEMPLATES.get(content_type, _DEFAULT_TEMPLATE)
+    return template.format(text=text)
+
+
+# ---------------------------------------------------------------------------
+# Public ingestion API
+# ---------------------------------------------------------------------------
+
 
 def ingest_pdf(
     path: str | Path,
-    parse_method: str = "docling",
+    parse_method: str = "pymupdf",
     collection_name: str = COLLECTION_NAME,
 ) -> int:
     """Ingest a PDF: parse, chunk, embed, and upsert to Qdrant.
 
     Args:
         path: Path to the PDF file.
-        parse_method: Parsing method (only "docling" supported).
+        parse_method: Parsing method (ignored, always uses pymupdf).
         collection_name: Qdrant collection name.
 
     Returns:
@@ -97,9 +147,8 @@ def _ingest_text(
     source: str,
     collection_name: str = COLLECTION_NAME,
 ) -> int:
-    """Core ingestion: chunk text, embed hypothetical questions, and
-    upsert to Qdrant. Each chunk produces multiple points -- one per
-    hypothetical question -- all sharing the same chunk_id.
+    """Core ingestion: chunk text, template-wrap per content_type, embed,
+    and upsert to Qdrant.  One vector per chunk.
 
     Args:
         text: Document text to ingest.
@@ -107,7 +156,7 @@ def _ingest_text(
         collection_name: Qdrant collection name.
 
     Returns:
-        Number of chunks ingested (not total points).
+        Number of chunks ingested.
     """
     ensure_collection(collection_name)
 
@@ -115,35 +164,28 @@ def _ingest_text(
     if not chunks:
         return 0
 
+    # Template-wrap each chunk per its content_type, then embed
+    wrapped_texts = [
+        _template_wrap(c["text"], c.get("content_type", "")) for c in chunks
+    ]
+    vectors = embed_documents(wrapped_texts)
+
     points: list[PointStruct] = []
-
-    for chunk in chunks:
-        chunk_id = str(uuid.uuid4())
-        questions = chunk.get("hypothetical_questions", [])
-        if not questions:
-            questions = [f"What does this text discuss: {chunk['text'][:100]}?"]
-
-        question_vectors = embed_documents(questions)
-
-        for question_text, vector in zip(questions, question_vectors):
-            point_id = str(uuid.uuid4())
-            payload = {
-                "question": question_text,
-                "chunk_text": chunk["text"],
-                "chunk_id": chunk_id,
-                "source": source,
-                "muscle_groups": chunk.get("muscle_groups", []),
-                "conditions": chunk.get("conditions", []),
-                "exercises": chunk.get("exercises", []),
-                "content_type": chunk.get("content_type", ""),
-                "summary": chunk.get("summary", ""),
-            }
-            points.append(PointStruct(id=point_id, vector=vector, payload=payload))
+    for chunk, vector in zip(chunks, vectors):
+        point_id = str(uuid.uuid4())
+        payload = {
+            "text": chunk["text"],
+            "source": source,
+            "muscle_groups": chunk.get("muscle_groups", []),
+            "conditions": chunk.get("conditions", []),
+            "exercises": chunk.get("exercises", []),
+            "content_type": chunk.get("content_type", ""),
+            "summary": chunk.get("summary", ""),
+        }
+        points.append(PointStruct(id=point_id, vector=vector, payload=payload))
 
     client = get_client()
-    batch_size = 100
-    for i in range(0, len(points), batch_size):
-        batch = points[i : i + batch_size]
-        client.upsert(collection_name=collection_name, points=batch)
+    for i in range(0, len(points), 100):
+        client.upsert(collection_name=collection_name, points=points[i : i + 100])
 
     return len(chunks)

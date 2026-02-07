@@ -11,14 +11,14 @@ backend/dedalus_tools/
 ├── api.py                 # FastAPI router (mounted at /rag in backend)
 ├── convex_client.py       # Singleton Convex client for patient data
 ├── retrieval/
-│   ├── client.py          # Qdrant Cloud client (collection: physio-knowledge-base-v2)
-│   ├── retriever.py       # PTRetriever with HyDE chunk dedup
+│   ├── client.py          # Qdrant Cloud client (collection: physio-knowledge-base-v3)
+│   ├── retriever.py       # PTRetriever (1:1 point:chunk, no dedup needed)
 │   ├── reranker.py        # Cross-encoder reranker
 │   └── ingestion_pipeline/
-│       ├── parsing.py     # Docling document extraction
-│       ├── chunking.py    # Agentic chunking (Groq + Instructor) with HyDE
+│       ├── parsing.py     # PyMuPDF document extraction (via pymupdf4llm)
+│       ├── chunking.py    # Agentic chunking (Groq + Instructor)
 │       ├── embedding.py   # Nomic v1.5 embeddings via FastEmbed (768d)
-│       └── ingest.py      # Parse -> chunk -> embed questions -> upsert
+│       └── ingest.py      # Parse -> chunk -> template-wrap -> embed -> upsert
 └── tests/                 # (removed -- mock tests deleted)
 ```
 
@@ -56,6 +56,6 @@ result = await run_pt_agent("What exercises help with rotator cuff impingement?"
 python3 -m pytest backend/dedalus_tools/tests/ -v
 ```
 
-## Key Design: HyDE Ingestion
+## Key Design: Template-Wrapped Chunk Embedding
 
-Each chunk generates 8-10 hypothetical questions via LLM. Those questions (not the chunk text) get embedded and stored. At query time, the user's question matches against these hypothetical question embeddings, then results are deduplicated by `chunk_id` to return chunk-level results. This closes the semantic gap between question-style queries and prose-style documents.
+Each chunk's text is wrapped in a content_type-specific template before embedding (e.g. an exercise_technique chunk gets prefixed with "Exercise technique and execution. Proper form, posture, and movement cues."). The vector captures the semantic role of the content. Raw text (without template) is stored in the payload. 1 vector per chunk, no deduplication needed. At query time, normal `embed_query()` with Nomic's `search_query:` prefix.
