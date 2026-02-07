@@ -1,7 +1,8 @@
 "use client";
 
+import confetti from "canvas-confetti";
 import { useMutation } from "convex/react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBodyState } from "@/hooks/useBodyState";
 import { useWorkoutState } from "@/hooks/useWorkoutState";
 import { type GeneratedPlan, generateWorkout } from "@/lib/generate-workout";
@@ -42,7 +43,7 @@ const GOAL_OPTIONS = [
   "general fitness",
 ] as const;
 
-const DURATION_OPTIONS = [15, 30, 45, 60, 90] as const;
+const DURATION_OPTIONS = [15, 30, 45, 60, 90, 120, 150, 180] as const;
 
 const EQUIPMENT_OPTIONS = [
   "dumbbells",
@@ -168,6 +169,39 @@ export function WorkoutPanel({
 
   const currentPlan = plans.find((p) => p._id === selectedPlanId) ?? null;
   const completedCount = exercises.filter((e) => e.completed).length;
+  const isWorkoutComplete =
+    completedCount === exercises.length && exercises.length > 0;
+
+  // Fire confetti once when the user completes the last exercise
+  const prevCompletedRef = useRef(completedCount);
+  const prevLengthRef = useRef(exercises.length);
+  useEffect(() => {
+    const prevCompleted = prevCompletedRef.current;
+    const prevLength = prevLengthRef.current;
+    prevCompletedRef.current = completedCount;
+    prevLengthRef.current = exercises.length;
+
+    // Only fire when exercise list didn't change (not a data load / remount)
+    // and completed count just reached the total
+    if (
+      isWorkoutComplete &&
+      prevCompleted < exercises.length &&
+      prevLength === exercises.length
+    ) {
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.7 },
+        angle: 120,
+      });
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.7 },
+        angle: 60,
+      });
+    }
+  }, [completedCount, isWorkoutComplete, exercises.length]);
 
   // ---- Handlers ----
 
@@ -478,6 +512,7 @@ export function WorkoutPanel({
                 <PlanCard
                   key={plan._id}
                   plan={plan}
+                  isComplete={plan._id === selectedPlanId && isWorkoutComplete}
                   onSelect={handleSelectPlan}
                   onDelete={handleDeletePlan}
                   onToggleActive={handleToggleActive}
@@ -520,6 +555,13 @@ export function WorkoutPanel({
                     }}
                   />
                 </div>
+                {isWorkoutComplete && (
+                  <div className="mt-2 animate-fade-in rounded-lg bg-gradient-to-r from-emerald-500/20 to-green-500/20 px-3 py-2 text-center">
+                    <span className="text-xs font-semibold text-emerald-400">
+                      &#x2714; Workout Complete!
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -792,7 +834,7 @@ export function WorkoutPanel({
               <label className="mb-1.5 block text-xs text-white/60">
                 Duration
               </label>
-              <div className="flex gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {DURATION_OPTIONS.map((mins) => (
                   <button
                     key={mins}
@@ -803,13 +845,15 @@ export function WorkoutPanel({
                         durationMinutes: mins,
                       }))
                     }
-                    className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                    className={`text-center ${
                       generateConfig.durationMinutes === mins
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-white/5 text-white/40 hover:bg-white/10"
+                        ? "mosaic-chip-active"
+                        : "mosaic-chip"
                     }`}
                   >
-                    {mins}m
+                    {mins >= 60
+                      ? `${mins % 60 === 0 ? mins / 60 : (mins / 60).toFixed(1)}hr`
+                      : `${mins}m`}
                   </button>
                 ))}
               </div>
@@ -845,7 +889,9 @@ export function WorkoutPanel({
                 })}
               </div>
               {generateConfig.equipment.length === 0 && (
-                <p className="mt-1 text-xs text-white/30">Bodyweight only</p>
+                <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
+                  Bodyweight only
+                </span>
               )}
             </div>
 
@@ -882,7 +928,9 @@ export function WorkoutPanel({
                 )}
               </div>
               {generateConfig.focusGroups.length === 0 && (
-                <p className="mt-1 text-xs text-white/30">Full body</p>
+                <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
+                  Full body
+                </span>
               )}
             </div>
 
@@ -916,11 +964,13 @@ export function WorkoutPanel({
 
 function PlanCard({
   plan,
+  isComplete,
   onSelect,
   onDelete,
   onToggleActive,
 }: {
   plan: WorkoutPlan;
+  isComplete: boolean;
   onSelect: (id: Id<"workoutPlans">) => void;
   onDelete: (id: Id<"workoutPlans">) => void;
   onToggleActive: (plan: WorkoutPlan) => void;
@@ -936,6 +986,11 @@ function PlanCard({
           <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
         )}
         <span className="flex-1 text-xs font-medium">{plan.title}</span>
+        {isComplete && (
+          <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
+            &#x2714; Done
+          </span>
+        )}
         <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             type="button"
@@ -1043,7 +1098,7 @@ function ExerciseRow({
         }`}
       >
         {exercise.completed && (
-          <span className="text-xs leading-none">&check;</span>
+          <span className="text-xs leading-none">&#x2714;</span>
         )}
       </button>
 

@@ -317,6 +317,10 @@ body {
    Mosaic Chip Buttons (filter pills)
    ============================================ */
 .mosaic-chip {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.45);
@@ -330,6 +334,10 @@ body {
 }
 
 .mosaic-chip-active {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
   background: linear-gradient(
     135deg,
     rgba(59, 130, 246, 0.15),
