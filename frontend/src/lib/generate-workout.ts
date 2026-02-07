@@ -14,6 +14,7 @@ export interface GenerateWorkoutRequest {
   goals?: string;
   durationMinutes?: number;
   equipment?: string[];
+  focusGroups?: string[];
 }
 
 export interface GeneratedExercise {

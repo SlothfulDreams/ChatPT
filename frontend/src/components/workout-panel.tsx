@@ -6,14 +6,54 @@ import { useBodyState } from "@/hooks/useBodyState";
 import { useWorkoutState } from "@/hooks/useWorkoutState";
 import { type GeneratedPlan, generateWorkout } from "@/lib/generate-workout";
 import { formatMuscleName } from "@/lib/muscle-utils";
+import { MUSCLE_GROUP_LABELS, type MuscleGroup } from "@/types/muscle-groups";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { GeneratedExercisesPreview } from "./generated-exercises-preview";
 
-type WorkoutView = "plan-list" | "plan-detail" | "exercise-form";
+type WorkoutView =
+  | "plan-list"
+  | "plan-detail"
+  | "exercise-form"
+  | "generate-config";
 
 type WorkoutExercise = Doc<"workoutExercises">;
 type WorkoutPlan = Doc<"workoutPlans">;
+
+interface GenerateConfig {
+  goals: string;
+  durationMinutes: number;
+  equipment: string[];
+  focusGroups: MuscleGroup[];
+}
+
+const DEFAULT_CONFIG: GenerateConfig = {
+  goals: "general fitness",
+  durationMinutes: 45,
+  equipment: [],
+  focusGroups: [],
+};
+
+const GOAL_OPTIONS = [
+  "rehabilitation",
+  "flexibility",
+  "strength",
+  "endurance",
+  "general fitness",
+] as const;
+
+const DURATION_OPTIONS = [15, 30, 45, 60, 90] as const;
+
+const EQUIPMENT_OPTIONS = [
+  "dumbbells",
+  "barbell",
+  "kettlebell",
+  "bands",
+  "machine",
+  "pull-up bar",
+  "bench",
+  "foam roller",
+] as const;
 
 interface WorkoutPanelProps {
   isWorkoutMode: boolean;
@@ -22,6 +62,7 @@ interface WorkoutPanelProps {
   onWorkoutTargetMeshIdsChange: (ids: Set<string>) => void;
   onHoverExercise: (meshIds: string[] | null) => void;
   onClose: () => void;
+  activeGroups: Set<MuscleGroup>;
 }
 
 export function WorkoutPanel({
@@ -31,6 +72,7 @@ export function WorkoutPanel({
   onWorkoutTargetMeshIdsChange,
   onHoverExercise,
   onClose,
+  activeGroups,
 }: WorkoutPanelProps) {
   const {
     user,
@@ -61,6 +103,8 @@ export function WorkoutPanel({
     null,
   );
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateConfig, setGenerateConfig] =
+    useState<GenerateConfig>(DEFAULT_CONFIG);
 
   const { body, muscleStates } = useBodyState();
 
@@ -261,9 +305,19 @@ export function WorkoutPanel({
     setView("plan-detail");
   }, [resetExerciseForm]);
 
+  const handleOpenGenerateConfig = useCallback(() => {
+    setGenerateConfig((prev) => ({
+      ...prev,
+      focusGroups: activeGroups.size > 0 ? [...activeGroups] : prev.focusGroups,
+    }));
+    setView("generate-config");
+  }, [activeGroups]);
+
   const handleBack = useCallback(() => {
     if (view === "exercise-form") {
       handleCancelExercise();
+    } else if (view === "generate-config") {
+      setView("plan-detail");
     } else if (view === "plan-detail") {
       setView("plan-list");
       onHoverExercise(null);
@@ -296,8 +350,9 @@ export function WorkoutPanel({
     [workoutTargetMeshIds, onWorkoutTargetMeshIdsChange],
   );
 
-  const handleGenerate = useCallback(async () => {
+  const handleRunGeneration = useCallback(async () => {
     if (!selectedPlanId) return;
+    setView("plan-detail");
     setGenerating(true);
     setGenerateError(null);
     setGeneratedPlan(null);
@@ -329,9 +384,10 @@ export function WorkoutPanel({
         muscleStates: apiMuscleStates,
         availableMeshIds,
         sex: body?.sex ?? undefined,
-        goals: "general fitness",
-        durationMinutes: 45,
-        equipment: [],
+        goals: generateConfig.goals,
+        durationMinutes: generateConfig.durationMinutes,
+        equipment: generateConfig.equipment,
+        focusGroups: generateConfig.focusGroups,
       });
 
       setGeneratedPlan(result);
@@ -342,7 +398,7 @@ export function WorkoutPanel({
     } finally {
       setGenerating(false);
     }
-  }, [selectedPlanId, muscleStates, body]);
+  }, [selectedPlanId, muscleStates, body, generateConfig]);
 
   // Deduplicate bilateral pairs for display
   const uniqueTargets = [...workoutTargetMeshIds].filter(
@@ -377,6 +433,7 @@ export function WorkoutPanel({
           {view === "plan-detail" && (currentPlan?.title ?? "Plan")}
           {view === "exercise-form" &&
             (editingExerciseId ? "Edit Exercise" : "Add Exercise")}
+          {view === "generate-config" && "Generate Workout"}
         </h3>
         <button
           type="button"
@@ -512,14 +569,31 @@ export function WorkoutPanel({
             </button>
 
             {/* Generate with AI */}
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating}
-              className="w-full rounded border border-blue-500/20 bg-blue-500/10 py-2 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20 disabled:opacity-50"
-            >
-              {generating ? "Generating..." : "Generate with AI"}
-            </button>
+            {!generating && (
+              <button
+                type="button"
+                onClick={handleOpenGenerateConfig}
+                className="w-full rounded border border-blue-500/20 bg-blue-500/10 py-2 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20"
+              >
+                Generate with AI
+              </button>
+            )}
+
+            {/* Generation loading */}
+            {generating && (
+              <div className="flex flex-col items-center gap-2 rounded border border-blue-500/20 bg-blue-500/5 p-4">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-400/30 border-t-blue-400" />
+                <p className="text-xs text-blue-400">Generating workout...</p>
+                <p className="text-center text-xs text-white/40">
+                  {generateConfig.goals} &middot;{" "}
+                  {generateConfig.durationMinutes}min
+                  {generateConfig.equipment.length > 0 &&
+                    ` · ${generateConfig.equipment.join(", ")}`}
+                  {generateConfig.focusGroups.length > 0 &&
+                    ` · ${generateConfig.focusGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(", ")}`}
+                </p>
+              </div>
+            )}
 
             {/* Generation error */}
             {generateError && (
@@ -532,7 +606,7 @@ export function WorkoutPanel({
                 plan={generatedPlan}
                 planId={selectedPlanId}
                 onSaved={() => setGeneratedPlan(null)}
-                onRegenerate={handleGenerate}
+                onRegenerate={handleOpenGenerateConfig}
                 onDismiss={() => setGeneratedPlan(null)}
               />
             )}
@@ -682,6 +756,151 @@ export function WorkoutPanel({
                 className="mosaic-btn-primary flex-1 py-2 text-xs font-medium"
               >
                 {editingExerciseId ? "Update" : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============ GENERATE CONFIG ============ */}
+        {view === "generate-config" && (
+          <div className="flex flex-col gap-4">
+            {/* Goal */}
+            <div>
+              <label className="mb-1.5 block text-xs text-white/60">Goal</label>
+              <div className="flex flex-wrap gap-1.5">
+                {GOAL_OPTIONS.map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() =>
+                      setGenerateConfig((prev) => ({ ...prev, goals: goal }))
+                    }
+                    className={
+                      generateConfig.goals === goal
+                        ? "mosaic-chip-active"
+                        : "mosaic-chip"
+                    }
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Duration */}
+            <div>
+              <label className="mb-1.5 block text-xs text-white/60">
+                Duration
+              </label>
+              <div className="flex gap-1.5">
+                {DURATION_OPTIONS.map((mins) => (
+                  <button
+                    key={mins}
+                    type="button"
+                    onClick={() =>
+                      setGenerateConfig((prev) => ({
+                        ...prev,
+                        durationMinutes: mins,
+                      }))
+                    }
+                    className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+                      generateConfig.durationMinutes === mins
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-white/5 text-white/40 hover:bg-white/10"
+                    }`}
+                  >
+                    {mins}m
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Equipment */}
+            <div>
+              <label className="mb-1.5 block text-xs text-white/60">
+                Equipment
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {EQUIPMENT_OPTIONS.map((item) => {
+                  const isSelected = generateConfig.equipment.includes(item);
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() =>
+                        setGenerateConfig((prev) => ({
+                          ...prev,
+                          equipment: isSelected
+                            ? prev.equipment.filter((e) => e !== item)
+                            : [...prev.equipment, item],
+                        }))
+                      }
+                      className={
+                        isSelected ? "mosaic-chip-active" : "mosaic-chip"
+                      }
+                    >
+                      {item}
+                    </button>
+                  );
+                })}
+              </div>
+              {generateConfig.equipment.length === 0 && (
+                <p className="mt-1 text-xs text-white/30">Bodyweight only</p>
+              )}
+            </div>
+
+            {/* Focus Areas */}
+            <div>
+              <label className="mb-1.5 block text-xs text-white/60">
+                Focus Areas
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {(Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]).map(
+                  (group) => {
+                    const isSelected =
+                      generateConfig.focusGroups.includes(group);
+                    return (
+                      <button
+                        key={group}
+                        type="button"
+                        onClick={() =>
+                          setGenerateConfig((prev) => ({
+                            ...prev,
+                            focusGroups: isSelected
+                              ? prev.focusGroups.filter((g) => g !== group)
+                              : [...prev.focusGroups, group],
+                          }))
+                        }
+                        className={
+                          isSelected ? "mosaic-chip-active" : "mosaic-chip"
+                        }
+                      >
+                        {MUSCLE_GROUP_LABELS[group]}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+              {generateConfig.focusGroups.length === 0 && (
+                <p className="mt-1 text-xs text-white/30">Full body</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setView("plan-detail")}
+                className="mosaic-btn flex-1 py-2 text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRunGeneration}
+                className="mosaic-btn-primary flex-1 py-2 text-xs font-medium"
+              >
+                Generate
               </button>
             </div>
           </div>

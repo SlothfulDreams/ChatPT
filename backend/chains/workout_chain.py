@@ -28,6 +28,9 @@ You MUST only use mesh IDs from this list in targetMeshIds:
 - Target duration: {duration_minutes} minutes
 - Available equipment: {equipment}
 
+## Focus Areas
+{focus_groups}
+
 ## Instructions
 1. Synthesize the RAG evidence into a concrete routine.
 2. Start with a warm-up (dynamic stretching / activation), then compound movements, then accessories.
@@ -76,6 +79,7 @@ async def generate_workout_plan(
     goals: str = "general fitness",
     duration_minutes: int = 45,
     equipment: list[str] | None = None,
+    focus_groups: list[str] | None = None,
 ) -> dict:
     """Run the workout generation chain and return the parsed plan dict."""
     chain = build_workout_chain()
@@ -87,6 +91,9 @@ async def generate_workout_plan(
             "goals": goals,
             "duration_minutes": str(duration_minutes),
             "equipment": ", ".join(equipment) if equipment else "bodyweight only",
+            "focus_groups": ", ".join(focus_groups)
+            if focus_groups
+            else "Full body — no specific focus areas specified.",
         }
     )
     return result

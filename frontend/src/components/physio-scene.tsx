@@ -484,6 +484,7 @@ export function PhysioScene() {
               onWorkoutTargetMeshIdsChange={setWorkoutTargetMeshIds}
               onHoverExercise={handleHoverExercise}
               onClose={handleCloseWorkout}
+              activeGroups={activeGroups}
             />
           )}
         </div>

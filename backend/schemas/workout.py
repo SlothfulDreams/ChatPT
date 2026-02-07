@@ -22,6 +22,7 @@ class GenerateWorkoutRequest(BaseModel):
     goals: str = "general fitness"
     durationMinutes: int = 45
     equipment: list[str] = []
+    focusGroups: list[str] = []
 
 
 class GeneratedExercise(BaseModel):

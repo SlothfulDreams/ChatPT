@@ -128,6 +128,7 @@ async def generate_workout(request: GenerateWorkoutRequest):
         goals=request.goals,
         duration_minutes=request.durationMinutes,
         equipment=request.equipment,
+        focus_groups=request.focusGroups,
     )
 
     exercises = plan.get("exercises", [])
