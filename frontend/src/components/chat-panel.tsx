@@ -10,6 +10,7 @@ import {
   type ChatMessage,
   useChat,
 } from "@/hooks/useChat";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { formatMuscleName, getOtherSide } from "@/lib/muscle-utils";
 import { MUSCLE_GROUP_LABELS, type MuscleGroup } from "@/types/muscle-groups";
 
@@ -99,6 +100,21 @@ export function ChatPanel({
     conversationTitle,
   } = useChat(allMeshIds, activeGroups, onSelectMuscles);
   const [input, setInput] = useState("");
+  const {
+    voiceState,
+    startRecording,
+    error: voiceError,
+  } = useVoiceInput(
+    useCallback(
+      (text: string) => {
+        const meshIds = selectedMuscles
+          ? Array.from(selectedMuscles)
+          : undefined;
+        sendMessage(text, meshIds);
+      },
+      [sendMessage, selectedMuscles],
+    ),
+  );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
@@ -444,6 +460,9 @@ export function ChatPanel({
 
       {/* Input */}
       <div className="border-t border-white/10 p-3">
+        {voiceError && (
+          <p className="mb-2 text-[11px] text-red-400">{voiceError}</p>
+        )}
         <div className="flex gap-2">
           <textarea
             value={input}
@@ -467,6 +486,70 @@ export function ChatPanel({
             </button>
           ) : (
             <>
+              <button
+                type="button"
+                onClick={startRecording}
+                disabled={voiceState !== "idle"}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  voiceState === "recording"
+                    ? "animate-pulse bg-red-500/20 text-red-300"
+                    : voiceState === "transcribing"
+                      ? "bg-blue-500/10 text-blue-300/50"
+                      : "bg-white/10 text-white/60 hover:bg-white/15 hover:text-white/80"
+                }`}
+                aria-label={
+                  voiceState === "recording"
+                    ? "Recording... (auto-stops on silence)"
+                    : voiceState === "transcribing"
+                      ? "Transcribing..."
+                      : "Start voice input"
+                }
+                title={
+                  voiceState === "recording"
+                    ? "Recording... (auto-stops on silence)"
+                    : voiceState === "transcribing"
+                      ? "Transcribing..."
+                      : "Voice input"
+                }
+              >
+                {voiceState === "transcribing" ? (
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      opacity="0.3"
+                    />
+                    <path
+                      d="M12 2a10 10 0 0 1 10 10"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="9" y="1" width="6" height="12" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                  </svg>
+                )}
+              </button>
               {selectionEntries.length > 0 && !input.trim() && (
                 <button
                   type="button"

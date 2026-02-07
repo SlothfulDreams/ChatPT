@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import tempfile
 
 logging.basicConfig(
     level=logging.INFO,
@@ -12,7 +13,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -82,10 +83,56 @@ class ChatRequest(BaseModel):
 # Endpoints
 # ============================================
 
+MAX_AUDIO_SIZE = 25 * 1024 * 1024  # 25 MB
+ALLOWED_AUDIO_EXTENSIONS = {".webm", ".mp3", ".mp4", ".wav", ".m4a", ".mpeg", ".mpga"}
+
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.post("/transcribe")
+async def transcribe(file: UploadFile = File(...)):
+    """Transcribe an audio file to text using Whisper."""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    suffix = os.path.splitext(file.filename)[1].lower()
+    if suffix not in ALLOWED_AUDIO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported audio format: {suffix}. Allowed: {ALLOWED_AUDIO_EXTENSIONS}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_AUDIO_SIZE:
+        raise HTTPException(status_code=400, detail="File exceeds 25 MB limit")
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        from dedalus_labs import AsyncDedalus
+
+        client = AsyncDedalus()
+        with open(tmp_path, "rb") as audio_file:
+            transcription = await client.audio.transcriptions.create(
+                model="openai/whisper-1",
+                file=audio_file,
+            )
+
+        return {"text": transcription.text}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if tmp_path:
+            os.unlink(tmp_path)
 
 
 @app.post("/chat")
