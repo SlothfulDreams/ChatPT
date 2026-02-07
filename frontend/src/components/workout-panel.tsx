@@ -1181,19 +1181,20 @@ function PlanCard({
           {plan.notes && (
             <p className="mb-2 text-xs text-white/50">{plan.notes}</p>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleActive(plan);
               }}
-              className={`rounded px-2 py-1 text-xs transition-colors ${
+              className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-all ${
                 plan.isActive
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-white/10 text-white/60 hover:bg-white/15"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
+                  : "border-white/10 bg-white/5 text-white/50 hover:border-white/20 hover:bg-white/10 hover:text-white/70"
               }`}
             >
+              <span className="text-[10px]">{plan.isActive ? "✓" : "○"}</span>
               {plan.isActive ? "Active" : "Activate"}
             </button>
             <button
@@ -1202,8 +1203,9 @@ function PlanCard({
                 e.stopPropagation();
                 onSelect(plan._id);
               }}
-              className="rounded bg-white/10 px-2 py-1 text-xs text-white/60 transition-colors hover:bg-white/15"
+              className="flex items-center gap-1 rounded-md border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-xs font-medium text-blue-400 transition-all hover:border-blue-500/30 hover:bg-blue-500/20"
             >
+              <span className="text-[10px]">→</span>
               Open
             </button>
             <button
@@ -1212,9 +1214,10 @@ function PlanCard({
                 e.stopPropagation();
                 onDelete(plan._id);
               }}
-              className="rounded px-2 py-1 text-xs text-red-400/50 transition-colors hover:bg-red-500/10 hover:text-red-400"
+              className="ml-auto flex h-6 w-6 items-center justify-center rounded-md border border-red-500/10 text-sm text-red-400/40 transition-all hover:border-red-500/20 hover:bg-red-500/10 hover:text-red-400"
+              title="Delete"
             >
-              Del
+              ×
             </button>
           </div>
         </div>
