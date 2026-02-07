@@ -56,14 +56,14 @@ function OnboardingHint() {
   return (
     <div className="animate-fade-in absolute bottom-16 left-1/2 z-20 -translate-x-1/2">
       <div className="mosaic-panel pointer-events-auto flex items-center gap-3 px-5 py-3">
-        <span className="text-xs leading-relaxed text-white/60">
+        <span className="text-xs leading-relaxed text-white/70">
           Click a muscle to inspect it &middot; Use the chat to describe pain or
           injuries &middot; Orbit with drag, zoom with scroll
         </span>
         <button
           type="button"
           onClick={dismiss}
-          className="shrink-0 text-xs text-white/30 transition-colors hover:text-white/70"
+          className="shrink-0 text-xs text-white/50 transition-colors hover:text-white/80"
         >
           Got it
         </button>
@@ -604,9 +604,16 @@ export function PhysioScene() {
 
       {/* Loading overlay */}
       {isLoading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/40 border-t-teal-400" />
-          <p className="mt-3 text-xs text-white/40">Loading...</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80">
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 backdrop-blur-sm">
+              <span className="font-mono text-sm font-bold tracking-tight text-white/60">
+                PT
+              </span>
+            </div>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/30 border-t-teal-400" />
+            <p className="text-xs text-white/50">Loading anatomy model...</p>
+          </div>
         </div>
       )}
     </div>

@@ -53,9 +53,9 @@ export function GeneratedExercisesPreview({
       <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
         <h4 className="text-xs font-semibold text-blue-400">{plan.title}</h4>
         {plan.notes && (
-          <p className="mt-1 text-xs text-white/40">{plan.notes}</p>
+          <p className="mt-1 text-xs text-white/55">{plan.notes}</p>
         )}
-        <p className="mt-1 text-xs text-white/30">
+        <p className="mt-1 text-xs text-white/50">
           {plan.exercises.length} exercises generated
         </p>
       </div>
@@ -77,7 +77,7 @@ export function GeneratedExercisesPreview({
           return (
             <div
               key={`${ex.name}-${i}`}
-              className="rounded-lg border border-white/5 bg-white/5 p-2.5"
+              className="rounded-lg border border-white/5 bg-white/5 p-2.5 transition-colors hover:bg-white/[0.08]"
             >
               <div className="flex items-start gap-2">
                 {/* Image thumbnail */}
@@ -91,7 +91,7 @@ export function GeneratedExercisesPreview({
                 <div className="min-w-0 flex-1">
                   <span className="block text-xs font-medium">{ex.name}</span>
                   {summary.length > 0 && (
-                    <span className="text-xs text-white/40">
+                    <span className="text-xs text-white/55">
                       {summary.join(" / ")}
                     </span>
                   )}
@@ -114,7 +114,7 @@ export function GeneratedExercisesPreview({
 
               {/* Notes / evidence reasoning */}
               {ex.notes && (
-                <p className="mt-1.5 text-xs leading-relaxed text-white/30">
+                <p className="mt-1.5 text-xs leading-relaxed text-white/50">
                   {ex.notes}
                 </p>
               )}

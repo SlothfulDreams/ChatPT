@@ -214,7 +214,7 @@ export function ChatPanel({
   );
 
   return (
-    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-96 flex-1 flex-col text-white">
+    <div className="pointer-events-auto mosaic-panel animate-slide-in-right flex min-h-0 w-96 flex-1 flex-col text-white">
       {/* Header */}
       <div
         className="relative flex shrink-0 items-center gap-1.5 border-b border-white/10 px-3 py-2.5"
@@ -224,8 +224,9 @@ export function ChatPanel({
         <button
           type="button"
           onClick={handleNewConversation}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-sm text-blue-400/70 transition-colors hover:bg-blue-500/20 hover:text-blue-300"
           title="New conversation"
+          aria-label="New conversation"
         >
           +
         </button>
@@ -270,7 +271,7 @@ export function ChatPanel({
                   <div className="mosaic-panel absolute left-0 top-full z-50 mt-1.5 w-72 overflow-hidden">
                     <div className="max-h-64 overflow-y-auto">
                       {pastConversations.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-white/30">
+                        <p className="px-4 py-3 text-xs text-white/50">
                           No past conversations
                         </p>
                       )}
@@ -290,7 +291,7 @@ export function ChatPanel({
                             <span className="truncate text-xs font-medium">
                               {conv.title ?? "Untitled"}
                             </span>
-                            <span className="text-[10px] text-white/25">
+                            <span className="text-[10px] text-white/40">
                               {new Date(conv.updatedAt).toLocaleDateString(
                                 undefined,
                                 { month: "short", day: "numeric" },
@@ -321,6 +322,7 @@ export function ChatPanel({
           type="button"
           onClick={onClose}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Close panel"
         >
           ×
         </button>
@@ -330,7 +332,7 @@ export function ChatPanel({
       {(selectionEntries.length > 0 ||
         (activeGroups && activeGroups.size > 0)) && (
         <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-4 py-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-white/30">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white/50">
             Focus
           </span>
           {activeGroups &&
@@ -396,8 +398,8 @@ export function ChatPanel({
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-white/50">How can I help?</p>
-            <p className="max-w-[220px] text-center text-xs text-white/30">
+            <p className="text-sm font-medium text-white/60">How can I help?</p>
+            <p className="max-w-[220px] text-center text-xs text-white/50">
               Describe pain, tightness, or an injury and I'll assess it.
             </p>
             <div className="flex flex-wrap justify-center gap-1.5 pt-1">
@@ -437,11 +439,15 @@ export function ChatPanel({
         <div className="flex gap-2">
           <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Describe your issue..."
             rows={1}
-            className="flex-1 resize-none rounded-lg bg-white/10 px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+            className="max-h-24 flex-1 resize-none rounded-lg bg-white/10 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-blue-500/30"
           />
           {isStreaming ? (
             <button
@@ -501,8 +507,10 @@ function MessageBubble({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-          isUser ? "bg-white/5 text-white/80" : "bg-white/5 text-white/80"
+        className={`max-w-[85%] px-3 py-2 text-xs leading-relaxed ${
+          isUser
+            ? "rounded-xl rounded-br-sm bg-white/[0.08] text-white/85"
+            : "rounded-xl border-l-2 border-blue-500/20 bg-white/5 text-white/85"
         } ${message.isStreaming ? "animate-pulse" : ""}`}
       >
         {/* Agent steps indicator */}
@@ -544,7 +552,7 @@ function StepsIndicator({ steps }: { steps: AgentStep[] }) {
     <div className="mb-2 space-y-1 border-b border-white/5 pb-2">
       {steps.map((step) => (
         <div key={step.tool}>
-          <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+          <div className="flex items-center gap-1.5 text-[10px] text-white/50">
             {step.status === "running" ? (
               <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-white/20 border-t-white/60" />
             ) : (

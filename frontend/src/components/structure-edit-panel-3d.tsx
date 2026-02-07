@@ -62,7 +62,7 @@ export function StructureEditPanel3D({
             {displayName}
             {side && ` (${side})`}
           </h3>
-          <div className="flex gap-2 text-xs text-white/50">
+          <div className="flex gap-2 text-xs text-white/60">
             {group && <span>{MUSCLE_GROUP_LABELS[group]}</span>}
             <span className="capitalize">{depth}</span>
           </div>
@@ -71,13 +71,14 @@ export function StructureEditPanel3D({
           type="button"
           onClick={onClose}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Close panel"
         >
           ×
         </button>
       </div>
 
       {/* Color (hue) */}
-      <label className="mb-1 block text-xs text-white/60">Color</label>
+      <label className="mb-1 block text-xs text-white/70">Color</label>
       <div className="mb-1 flex items-center gap-2">
         <input
           type="range"
@@ -101,7 +102,7 @@ export function StructureEditPanel3D({
       </div>
 
       {/* Opacity */}
-      <label className="mb-1 block text-xs text-white/60">
+      <label className="mb-1 block text-xs text-white/70">
         Opacity: {(visual.opacity * 100).toFixed(0)}%
       </label>
       <input
@@ -115,7 +116,7 @@ export function StructureEditPanel3D({
       />
 
       {/* Metalness */}
-      <label className="mb-1 block text-xs text-white/60">
+      <label className="mb-1 block text-xs text-white/70">
         Metalness: {(visual.metalness * 100).toFixed(0)}%
       </label>
       <input
@@ -129,7 +130,7 @@ export function StructureEditPanel3D({
       />
 
       {/* Roughness */}
-      <label className="mb-1 block text-xs text-white/60">
+      <label className="mb-1 block text-xs text-white/70">
         Roughness: {(visual.roughness * 100).toFixed(0)}%
       </label>
       <input
@@ -143,7 +144,7 @@ export function StructureEditPanel3D({
       />
 
       {/* Emissive (glow) */}
-      <label className="mb-1 block text-xs text-white/60">
+      <label className="mb-1 block text-xs text-white/70">
         Glow: {(visual.emissiveIntensity * 100).toFixed(0)}%
       </label>
       <input
