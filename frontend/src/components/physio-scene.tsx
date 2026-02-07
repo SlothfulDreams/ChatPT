@@ -172,7 +172,7 @@ export function PhysioScene() {
   );
 
   // View state
-  const [isFrontView, setIsFrontView] = useState(true);
+  const isFrontView = true;
   const [renderingSettings] = useState<RenderingSettings>(
     DEFAULT_RENDERING_SETTINGS,
   );
@@ -536,17 +536,6 @@ export function PhysioScene() {
                 <span className="absolute -top-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-400 to-teal-400" />
               )}
               {selectBothSides ? "L+R" : "L/R"}
-            </button>
-
-            <div className="h-5 w-px bg-white/10" />
-
-            {/* Front/Back View */}
-            <button
-              type="button"
-              onClick={() => setIsFrontView((v) => !v)}
-              className="relative rounded-full px-4 py-2 text-xs font-medium text-white/70 transition-colors hover:text-white"
-            >
-              {isFrontView ? "Back View" : "Front View"}
             </button>
 
             <div className="h-5 w-px bg-white/10" />

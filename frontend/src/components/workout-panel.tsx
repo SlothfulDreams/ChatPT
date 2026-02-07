@@ -484,7 +484,7 @@ export function WorkoutPanel({
   }
 
   return (
-    <div className="pointer-events-auto mosaic-panel animate-slide-in-left flex min-h-0 w-full shrink flex-col overflow-hidden text-white">
+    <div className="pointer-events-auto mosaic-panel animate-slide-in-left flex min-h-0 w-full flex-1 flex-col overflow-hidden text-white">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         {view !== "plan-list" && (
