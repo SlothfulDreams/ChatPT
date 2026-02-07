@@ -891,20 +891,12 @@ export function WorkoutPanel({
             </div>
 
             {/* Duration */}
-<<<<<<< HEAD
-            <div>
-              <label className="mb-1.5 block text-xs text-white/60">
-                Duration
-              </label>
-              <div className="grid grid-cols-4 gap-1.5">
-=======
             <div
               className="mosaic-section animate-fade-up"
               style={{ animationDelay: "60ms" }}
             >
               <div className="mosaic-section-label">Duration</div>
-              <div className="mosaic-segmented">
->>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
+              <div className="grid grid-cols-4 gap-1.5">
                 {DURATION_OPTIONS.map((mins) => (
                   <button
                     key={mins}
@@ -915,19 +907,11 @@ export function WorkoutPanel({
                         durationMinutes: mins,
                       }))
                     }
-<<<<<<< HEAD
                     className={`text-center ${
                       generateConfig.durationMinutes === mins
                         ? "mosaic-chip-active"
                         : "mosaic-chip"
                     }`}
-=======
-                    className={
-                      generateConfig.durationMinutes === mins
-                        ? "mosaic-segmented-item-active"
-                        : "mosaic-segmented-item"
-                    }
->>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
                   >
                     {mins >= 60
                       ? `${mins % 60 === 0 ? mins / 60 : (mins / 60).toFixed(1)}hr`
@@ -971,54 +955,13 @@ export function WorkoutPanel({
                 })}
               </div>
               {generateConfig.equipment.length === 0 && (
-<<<<<<< HEAD
                 <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
                   Bodyweight only
                 </span>
-=======
-                <p className="mt-1.5 text-xs text-white/50">Bodyweight only</p>
->>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
               )}
             </div>
 
             {/* Focus Areas */}
-<<<<<<< HEAD
-            <div>
-              <label className="mb-1.5 block text-xs text-white/60">
-                Focus Areas
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {(Object.keys(MUSCLE_GROUP_LABELS) as MuscleGroup[]).map(
-                  (group) => {
-                    const isSelected =
-                      generateConfig.focusGroups.includes(group);
-                    return (
-                      <button
-                        key={group}
-                        type="button"
-                        onClick={() =>
-                          setGenerateConfig((prev) => ({
-                            ...prev,
-                            focusGroups: isSelected
-                              ? prev.focusGroups.filter((g) => g !== group)
-                              : [...prev.focusGroups, group],
-                          }))
-                        }
-                        className={
-                          isSelected ? "mosaic-chip-active" : "mosaic-chip"
-                        }
-                      >
-                        {MUSCLE_GROUP_LABELS[group]}
-                      </button>
-                    );
-                  },
-                )}
-              </div>
-              {generateConfig.focusGroups.length === 0 && (
-                <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
-                  Full body
-                </span>
-=======
             <div
               className="mosaic-section animate-fade-up"
               style={{ animationDelay: "180ms" }}
@@ -1052,7 +995,9 @@ export function WorkoutPanel({
               </button>
 
               {!focusExpanded && generateConfig.focusGroups.length === 0 && (
-                <p className="mt-1.5 text-xs text-white/50">Full body</p>
+                <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
+                  Full body
+                </span>
               )}
 
               {!focusExpanded && generateConfig.focusGroups.length > 0 && (
@@ -1121,7 +1066,6 @@ export function WorkoutPanel({
                     </button>
                   )}
                 </div>
->>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
               )}
             </div>
 
