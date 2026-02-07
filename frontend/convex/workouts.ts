@@ -256,3 +256,24 @@ export const toggleExerciseComplete = mutation({
     return null;
   },
 });
+
+export const resetProgress = mutation({
+  args: { planId: v.id("workoutPlans") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const exercises = await ctx.db
+      .query("workoutExercises")
+      .withIndex("by_plan", (q) => q.eq("planId", args.planId))
+      .collect();
+    for (const ex of exercises) {
+      if (ex.completed) {
+        await ctx.db.patch(ex._id, {
+          completed: false,
+          completedAt: undefined,
+        });
+      }
+    }
+    await ctx.db.patch(args.planId, { updatedAt: Date.now() });
+    return null;
+  },
+});

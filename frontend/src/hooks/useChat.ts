@@ -346,6 +346,8 @@ export function useChat(
                     weightKg: body.weightKg,
                     heightCm: body.heightCm,
                     birthDate: body.birthDate,
+                    equipment: body.equipment ?? [],
+                    fitnessGoals: body.fitnessGoals ?? undefined,
                   }
                 : null,
               availableMeshIds,

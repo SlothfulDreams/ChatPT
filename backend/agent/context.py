@@ -64,6 +64,16 @@ def build_context(
         if body_parts:
             parts.append(f"\n\nUser body info: {', '.join(body_parts)}")
 
+        # Equipment
+        equipment = _attr(body, "equipment") or []
+        if equipment:
+            parts.append(f"\nAvailable equipment: {', '.join(equipment)}")
+
+        # Fitness goal
+        goals = _attr(body, "fitnessGoals")
+        if goals:
+            parts.append(f"\nFitness goal: {goals}")
+
     # Available mesh IDs grouped by muscle group for structured lookup
     grouped = _group_mesh_ids(available_mesh_ids)
     parts.append(
@@ -81,8 +91,10 @@ def build_context(
     # Selected muscles
     if selected_mesh_ids:
         lines = [
-            "\n\n## Currently Selected Muscles",
-            "The user has selected the following muscles on the 3D model (focus your diagnosis on these):",
+            "\n\n## Currently Selected Muscles (FOCUS HERE)",
+            "The user has selected these muscles on the 3D model. "
+            "These are your PRIMARY targets -- update them with `update_muscle` "
+            "when the user describes symptoms:",
         ]
         for mesh_id in selected_mesh_ids:
             state = next(
@@ -109,7 +121,8 @@ def build_context(
         lines = [
             "\n\n## Active Muscle Groups",
             f"The user is currently focused on these muscle groups in the 3D model: {', '.join(labels)}",
-            'When the user says "this hurts" or refers to a body area without being specific, assume they mean muscles in these groups.',
+            "When the user describes symptoms without naming specific muscles, "
+            "use the mesh IDs from these groups for `select_muscles` and `update_muscle`.",
         ]
         parts.append("\n".join(lines))
 

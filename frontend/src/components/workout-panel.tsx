@@ -136,11 +136,31 @@ export function WorkoutPanel({
     null,
   );
   const [generateError, setGenerateError] = useState<string | null>(null);
-  const [generateConfig, setGenerateConfig] =
-    useState<GenerateConfig>(DEFAULT_CONFIG);
+  const { body, muscleStates } = useBodyState();
+
+  const [generateConfig, setGenerateConfig] = useState<GenerateConfig>(() => ({
+    goals: body?.fitnessGoals || DEFAULT_CONFIG.goals,
+    durationMinutes:
+      body?.defaultWorkoutDurationMinutes ?? DEFAULT_CONFIG.durationMinutes,
+    equipment: body?.equipment ?? DEFAULT_CONFIG.equipment,
+    focusGroups: DEFAULT_CONFIG.focusGroups,
+  }));
   const [focusExpanded, setFocusExpanded] = useState(false);
 
-  const { body, muscleStates } = useBodyState();
+  // Sync defaults when body loads (it may be null on first render)
+  const configSeeded = useRef(false);
+  useEffect(() => {
+    if (body && !configSeeded.current) {
+      configSeeded.current = true;
+      setGenerateConfig((prev) => ({
+        ...prev,
+        goals: body.fitnessGoals || prev.goals,
+        durationMinutes:
+          body.defaultWorkoutDurationMinutes ?? prev.durationMinutes,
+        equipment: body.equipment ?? prev.equipment,
+      }));
+    }
+  }, [body]);
 
   // Mutations
   const createPlan = useMutation(api.workouts.createPlan);
@@ -151,6 +171,7 @@ export function WorkoutPanel({
   const deleteExercise = useMutation(api.workouts.deleteExercise);
   const reorderExercises = useMutation(api.workouts.reorderExercises);
   const toggleComplete = useMutation(api.workouts.toggleExerciseComplete);
+  const resetProgress = useMutation(api.workouts.resetProgress);
   const applyWorkoutEffect = useMutation(api.muscles.applyWorkoutEffect);
 
   // Drag-to-reorder state
@@ -622,6 +643,18 @@ export function WorkoutPanel({
                     </span>
                   </div>
                 )}
+                {completedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectedPlanId &&
+                      resetProgress({ planId: selectedPlanId })
+                    }
+                    className="mt-1 self-end text-xs text-white/30 transition-colors hover:text-white/60"
+                  >
+                    Reset progress
+                  </button>
+                )}
               </div>
             )}
 
@@ -669,17 +702,6 @@ export function WorkoutPanel({
             >
               + Add Exercise
             </button>
-
-            {/* Generate with AI */}
-            {!generating && (
-              <button
-                type="button"
-                onClick={handleOpenGenerateConfig}
-                className="w-full rounded border border-blue-500/20 bg-blue-500/10 py-2 text-xs font-medium text-blue-400 transition-colors hover:bg-blue-500/20"
-              >
-                Generate with AI
-              </button>
-            )}
 
             {/* Generation loading */}
             {generating && (

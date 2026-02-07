@@ -92,6 +92,9 @@ export default defineSchema({
     weightKg: v.optional(v.number()),
     heightCm: v.optional(v.number()),
     birthDate: v.optional(v.number()),
+    equipment: v.optional(v.array(v.string())),
+    fitnessGoals: v.optional(v.string()),
+    defaultWorkoutDurationMinutes: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 

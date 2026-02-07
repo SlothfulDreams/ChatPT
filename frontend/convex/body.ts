@@ -1,5 +1,5 @@
-import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 import { bodySex } from "./schema";
 
 export const getByUser = query({
@@ -14,6 +14,9 @@ export const getByUser = query({
       weightKg: v.optional(v.number()),
       heightCm: v.optional(v.number()),
       birthDate: v.optional(v.number()),
+      equipment: v.optional(v.array(v.string())),
+      fitnessGoals: v.optional(v.string()),
+      defaultWorkoutDurationMinutes: v.optional(v.number()),
       updatedAt: v.number(),
     }),
     v.null(),
@@ -46,5 +49,28 @@ export const ensure = mutation({
       modelType: "anatomical_body",
       updatedAt: Date.now(),
     });
+  },
+});
+
+export const update = mutation({
+  args: {
+    bodyId: v.id("bodies"),
+    sex: v.optional(bodySex),
+    weightKg: v.optional(v.number()),
+    heightCm: v.optional(v.number()),
+    birthDate: v.optional(v.number()),
+    equipment: v.optional(v.array(v.string())),
+    fitnessGoals: v.optional(v.string()),
+    defaultWorkoutDurationMinutes: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { bodyId, ...fields } = args;
+    const updates: Record<string, unknown> = { updatedAt: Date.now() };
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) updates[key] = value;
+    }
+    await ctx.db.patch(bodyId, updates);
+    return null;
   },
 });

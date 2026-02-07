@@ -550,22 +550,6 @@ export function ChatPanel({
                   </svg>
                 )}
               </button>
-              {selectionEntries.length > 0 && !input.trim() && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const muscleNames = selectionEntries
-                      .map((e) => e.label)
-                      .join(", ");
-                    const prompt = `Please assess the following muscles I've selected: ${muscleNames}. What's your initial evaluation? Ask me any relevant questions about symptoms.`;
-                    const meshIds = Array.from(selectedMuscles ?? []);
-                    sendMessage(prompt, meshIds);
-                  }}
-                  className="shrink-0 rounded-lg bg-blue-500/20 px-3 py-2 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-500/30"
-                >
-                  Diagnose
-                </button>
-              )}
               <button
                 type="button"
                 onClick={handleSend}
@@ -618,16 +602,11 @@ function MessageBubble({
         )}
 
         {message.actions && message.actions.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1 border-t border-white/10 pt-2">
-            {message.actions.map((action, i) => (
-              <ActionChip
-                key={`${action.name}-${i}`}
-                action={action}
-                applied={message.actionsApplied ?? false}
-                onHighlight={onHighlightMuscles}
-              />
-            ))}
-          </div>
+          <CollapsibleActions
+            actions={message.actions}
+            applied={message.actionsApplied ?? false}
+            onHighlight={onHighlightMuscles}
+          />
         )}
       </div>
     </div>
@@ -671,6 +650,55 @@ function StepsIndicator({ steps }: { steps: AgentStep[] }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================
+// Collapsible Actions
+// ============================================
+
+function CollapsibleActions({
+  actions,
+  applied,
+  onHighlight,
+}: {
+  actions: ChatAction[];
+  applied: boolean;
+  onHighlight?: (meshIds: string[]) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const count = actions.length;
+
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex w-full items-center gap-1.5 text-[10px] text-white/40 transition-colors hover:text-white/60"
+      >
+        <span
+          className={`inline-block h-3 w-3 text-center leading-3 transition-transform ${expanded ? "rotate-90" : ""}`}
+        >
+          &#x25B8;
+        </span>
+        <span>
+          {count} action{count !== 1 ? "s" : ""}{" "}
+          {applied ? "applied" : "pending"}
+        </span>
+      </button>
+      {expanded && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {actions.map((action, i) => (
+            <ActionChip
+              key={`${action.name}-${i}`}
+              action={action}
+              applied={applied}
+              onHighlight={onHighlight}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

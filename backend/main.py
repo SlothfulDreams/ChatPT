@@ -62,6 +62,8 @@ class BodyContext(BaseModel):
     weightKg: float | None = None
     heightCm: float | None = None
     birthDate: float | None = None
+    equipment: list[str] = []
+    fitnessGoals: str | None = None
 
 
 class MessageInput(BaseModel):
