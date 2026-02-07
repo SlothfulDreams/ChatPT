@@ -137,14 +137,14 @@ export default async function LandingPage() {
               PT
             </span>
           </div>
-          <span className="font-mono text-sm tracking-tight text-white/40">
+          <span className="font-mono text-sm tracking-tight text-white/55">
             ChatPT
           </span>
         </div>
         <div className="flex items-center gap-3">
           <Link
             href="/sign-in"
-            className="rounded-lg px-4 py-2 text-sm text-white/50 transition-colors hover:text-white"
+            className="rounded-lg px-4 py-2 text-sm text-white/60 transition-colors hover:text-white"
           >
             Sign In
           </Link>
@@ -166,7 +166,7 @@ export default async function LandingPage() {
             style={{ animationDelay: "0.2s" }}
           >
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse-glow" />
-            <span className="font-mono text-xs tracking-wide text-white/40">
+            <span className="font-mono text-xs tracking-wide text-white/55">
               3D PHYSIOTHERAPY INTELLIGENCE
             </span>
           </div>
@@ -184,7 +184,7 @@ export default async function LandingPage() {
 
           {/* Subtitle */}
           <p
-            className="animate-fade-up mx-auto mb-12 max-w-lg text-base leading-relaxed text-white/35 sm:text-lg"
+            className="animate-fade-up mx-auto mb-8 max-w-lg text-base leading-relaxed text-white/50 sm:text-lg"
             style={{ animationDelay: "0.5s" }}
           >
             Interactive 3D muscle visualization with pain tracking, workout
@@ -198,14 +198,14 @@ export default async function LandingPage() {
           >
             <Link
               href="/sign-up"
-              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 via-teal-400 to-green-400 px-8 py-3.5 text-sm font-medium text-black transition-all hover:shadow-[0_0_40px_rgba(59,130,246,0.2)]"
+              className="group relative overflow-hidden rounded-xl bg-gradient-to-r from-blue-500 via-teal-400 to-green-400 px-10 py-4 text-base font-semibold text-black shadow-[0_0_30px_rgba(59,130,246,0.3)] transition-all hover:shadow-[0_0_50px_rgba(59,130,246,0.4)]"
             >
               <span className="relative z-10">Start Mapping</span>
               <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-teal-300 to-green-300 opacity-0 transition-opacity group-hover:opacity-100" />
             </Link>
             <Link
               href="/sign-in"
-              className="mosaic-btn rounded-xl px-8 py-3.5 text-sm text-white/60 transition-all hover:text-white/80"
+              className="mosaic-btn rounded-xl px-8 py-3.5 text-sm text-white/70 transition-all hover:text-white/90"
             >
               Sign In
             </Link>
@@ -221,16 +221,19 @@ export default async function LandingPage() {
             label="VISUALIZE"
             title="3D Muscle Mapping"
             description="Interactive anatomical model with real-time condition rendering. Click any muscle to inspect and edit."
+            accentColor="blue"
           />
           <FeatureCard
             label="TRACK"
             title="Pain & Recovery"
             description="Log pain levels, strength metrics, and range of motion. Watch your body heal over time."
+            accentColor="teal"
           />
           <FeatureCard
             label="PLAN"
             title="Workout Builder"
             description="Create exercise plans linked to specific muscles. See target muscles light up on the 3D model."
+            accentColor="green"
           />
         </div>
 
@@ -244,22 +247,50 @@ export default async function LandingPage() {
   );
 }
 
+const ACCENT_COLORS = {
+  blue: {
+    border: "border-blue-500/15 hover:border-blue-500/25",
+    label: "text-blue-400/50",
+    dot: "bg-blue-500",
+  },
+  teal: {
+    border: "border-teal-500/15 hover:border-teal-500/25",
+    label: "text-teal-400/50",
+    dot: "bg-teal-500",
+  },
+  green: {
+    border: "border-green-500/15 hover:border-green-500/25",
+    label: "text-green-400/50",
+    dot: "bg-green-500",
+  },
+} as const;
+
 function FeatureCard({
   label,
   title,
   description,
+  accentColor = "blue",
 }: {
   label: string;
   title: string;
   description: string;
+  accentColor?: keyof typeof ACCENT_COLORS;
 }) {
+  const accent = ACCENT_COLORS[accentColor];
   return (
-    <div className="mosaic-panel mosaic-panel-rgb group p-5 transition-all hover:scale-[1.02]">
-      <span className="mb-3 block font-mono text-[10px] tracking-[0.2em] text-white/20">
+    <div
+      className={`mosaic-panel mosaic-panel-rgb group border p-5 transition-all hover:scale-[1.02] ${accent.border}`}
+    >
+      <span
+        className={`mb-3 flex items-center gap-2 font-mono text-[10px] tracking-[0.2em] ${accent.label}`}
+      >
+        <span
+          className={`inline-block h-1 w-1 rounded-full ${accent.dot} opacity-60`}
+        />
         {label}
       </span>
-      <h3 className="mb-2 text-sm font-medium text-white/80">{title}</h3>
-      <p className="text-xs leading-relaxed text-white/30">{description}</p>
+      <h3 className="mb-2 text-sm font-medium text-white/85">{title}</h3>
+      <p className="text-xs leading-relaxed text-white/50">{description}</p>
     </div>
   );
 }

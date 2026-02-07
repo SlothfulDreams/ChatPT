@@ -56,6 +56,38 @@ const EQUIPMENT_OPTIONS = [
   "foam roller",
 ] as const;
 
+const EQUIPMENT_ICONS: Record<string, string> = {
+  dumbbells: "\u2742",
+  barbell: "\u2505",
+  kettlebell: "\u25C9",
+  bands: "\u223F",
+  machine: "\u2699",
+  "pull-up bar": "\u2502",
+  bench: "\u25AC",
+  "foam roller": "\u25CB",
+};
+
+const FOCUS_REGIONS: { label: string; groups: MuscleGroup[] }[] = [
+  {
+    label: "Upper Body",
+    groups: [
+      "neck",
+      "chest",
+      "shoulders",
+      "rotator_cuff",
+      "upper_back",
+      "biceps",
+      "triceps",
+      "forearms",
+    ],
+  },
+  { label: "Core", groups: ["core", "lower_back", "hip_flexors"] },
+  {
+    label: "Lower Body",
+    groups: ["glutes", "quads", "hamstrings", "adductors", "calves", "shins"],
+  },
+];
+
 interface WorkoutPanelProps {
   isWorkoutMode: boolean;
   onSetWorkoutMode: (mode: boolean) => void;
@@ -106,6 +138,7 @@ export function WorkoutPanel({
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateConfig, setGenerateConfig] =
     useState<GenerateConfig>(DEFAULT_CONFIG);
+  const [focusExpanded, setFocusExpanded] = useState(false);
 
   const { body, muscleStates } = useBodyState();
 
@@ -344,6 +377,7 @@ export function WorkoutPanel({
       ...prev,
       focusGroups: activeGroups.size > 0 ? [...activeGroups] : prev.focusGroups,
     }));
+    setFocusExpanded(false);
     setView("generate-config");
   }, [activeGroups]);
 
@@ -450,7 +484,7 @@ export function WorkoutPanel({
   }
 
   return (
-    <div className="pointer-events-auto mosaic-panel flex min-h-0 w-full shrink flex-col overflow-hidden text-white">
+    <div className="pointer-events-auto mosaic-panel animate-slide-in-left flex min-h-0 w-full shrink flex-col overflow-hidden text-white">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         {view !== "plan-list" && (
@@ -458,6 +492,7 @@ export function WorkoutPanel({
             type="button"
             onClick={handleBack}
             className="text-xs text-white/50 transition-colors hover:text-white"
+            aria-label="Go back"
           >
             &larr;
           </button>
@@ -473,6 +508,7 @@ export function WorkoutPanel({
           type="button"
           onClick={handleClose}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+          aria-label="Close panel"
         >
           ×
         </button>
@@ -491,7 +527,7 @@ export function WorkoutPanel({
                 onChange={(e) => setNewPlanTitle(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreatePlan()}
                 placeholder="New plan name..."
-                className="flex-1 rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                className="flex-1 rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
               />
               <button
                 type="button"
@@ -504,7 +540,7 @@ export function WorkoutPanel({
             </div>
 
             {plans.length === 0 ? (
-              <p className="py-4 text-center text-xs text-white/30">
+              <p className="py-4 text-center text-xs text-white/50">
                 No workout plans yet
               </p>
             ) : (
@@ -567,7 +603,7 @@ export function WorkoutPanel({
 
             {/* Exercise list */}
             {exercises.length === 0 ? (
-              <p className="py-3 text-center text-xs text-white/30">
+              <p className="py-3 text-center text-xs text-white/50">
                 No exercises yet
               </p>
             ) : (
@@ -623,17 +659,39 @@ export function WorkoutPanel({
 
             {/* Generation loading */}
             {generating && (
-              <div className="flex flex-col items-center gap-2 rounded border border-blue-500/20 bg-blue-500/5 p-4">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-400/30 border-t-blue-400" />
-                <p className="text-xs text-blue-400">Generating workout...</p>
-                <p className="text-center text-xs text-white/40">
-                  {generateConfig.goals} &middot;{" "}
-                  {generateConfig.durationMinutes}min
-                  {generateConfig.equipment.length > 0 &&
-                    ` · ${generateConfig.equipment.join(", ")}`}
-                  {generateConfig.focusGroups.length > 0 &&
-                    ` · ${generateConfig.focusGroups.map((g) => MUSCLE_GROUP_LABELS[g]).join(", ")}`}
-                </p>
+              <div className="animate-fade-up mosaic-section relative overflow-hidden border-blue-500/15">
+                {/* Pulsing progress bar */}
+                <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden">
+                  <div className="mosaic-progress h-full w-full animate-pulse" />
+                </div>
+                <div className="flex flex-col items-center gap-2.5 pt-2">
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-white/70">
+                    Generating workout
+                    <span className="inline-flex gap-px text-blue-400">
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    <span className="mosaic-tag rounded-full px-2 py-0.5 text-xs">
+                      {generateConfig.goals}
+                    </span>
+                    <span className="mosaic-tag rounded-full px-2 py-0.5 text-xs">
+                      {generateConfig.durationMinutes}min
+                    </span>
+                    {generateConfig.equipment.length > 0 && (
+                      <span className="mosaic-tag rounded-full px-2 py-0.5 text-xs">
+                        {generateConfig.equipment.length} equipment
+                      </span>
+                    )}
+                    {generateConfig.focusGroups.length > 0 && (
+                      <span className="mosaic-tag rounded-full px-2 py-0.5 text-xs">
+                        {generateConfig.focusGroups.length} focus areas
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -666,7 +724,7 @@ export function WorkoutPanel({
                 value={exName}
                 onChange={(e) => setExName(e.target.value)}
                 placeholder="e.g. Bench Press"
-                className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
               />
             </div>
 
@@ -680,7 +738,7 @@ export function WorkoutPanel({
                   onChange={(e) => setExSets(e.target.value)}
                   placeholder="3"
                   min="0"
-                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
                 />
               </div>
               <div>
@@ -691,7 +749,7 @@ export function WorkoutPanel({
                   onChange={(e) => setExReps(e.target.value)}
                   placeholder="12"
                   min="0"
-                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
                 />
               </div>
             </div>
@@ -708,7 +766,7 @@ export function WorkoutPanel({
                   onChange={(e) => setExDuration(e.target.value)}
                   placeholder="60"
                   min="0"
-                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
                 />
               </div>
               <div>
@@ -722,7 +780,7 @@ export function WorkoutPanel({
                     onChange={(e) => setExWeight(e.target.value)}
                     placeholder="0"
                     min="0"
-                    className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                    className="w-full rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
                   />
                   <button
                     type="button"
@@ -745,7 +803,7 @@ export function WorkoutPanel({
                 onChange={(e) => setExNotes(e.target.value)}
                 placeholder="Optional notes..."
                 rows={2}
-                className="w-full resize-none rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-white/20"
+                className="w-full resize-none rounded bg-white/10 px-2 py-1.5 text-xs text-white placeholder:text-white/40 focus:outline-none focus:ring-1 focus:ring-white/20"
               />
             </div>
 
@@ -778,7 +836,7 @@ export function WorkoutPanel({
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-white/30">No muscles selected</p>
+                <p className="text-xs text-white/50">No muscles selected</p>
               )}
             </div>
 
@@ -805,10 +863,13 @@ export function WorkoutPanel({
 
         {/* ============ GENERATE CONFIG ============ */}
         {view === "generate-config" && (
-          <div className="flex flex-col gap-4">
+          <div className="animate-fade-up flex flex-col gap-3">
             {/* Goal */}
-            <div>
-              <label className="mb-1.5 block text-xs text-white/60">Goal</label>
+            <div
+              className="mosaic-section animate-fade-up"
+              style={{ animationDelay: "0ms" }}
+            >
+              <div className="mosaic-section-label">Goal</div>
               <div className="flex flex-wrap gap-1.5">
                 {GOAL_OPTIONS.map((goal) => (
                   <button
@@ -817,11 +878,11 @@ export function WorkoutPanel({
                     onClick={() =>
                       setGenerateConfig((prev) => ({ ...prev, goals: goal }))
                     }
-                    className={
+                    className={`rounded-full px-2.5 py-1 text-xs ${
                       generateConfig.goals === goal
                         ? "mosaic-chip-active"
                         : "mosaic-chip"
-                    }
+                    }`}
                   >
                     {goal}
                   </button>
@@ -830,11 +891,20 @@ export function WorkoutPanel({
             </div>
 
             {/* Duration */}
+<<<<<<< HEAD
             <div>
               <label className="mb-1.5 block text-xs text-white/60">
                 Duration
               </label>
               <div className="grid grid-cols-4 gap-1.5">
+=======
+            <div
+              className="mosaic-section animate-fade-up"
+              style={{ animationDelay: "60ms" }}
+            >
+              <div className="mosaic-section-label">Duration</div>
+              <div className="mosaic-segmented">
+>>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
                 {DURATION_OPTIONS.map((mins) => (
                   <button
                     key={mins}
@@ -845,11 +915,19 @@ export function WorkoutPanel({
                         durationMinutes: mins,
                       }))
                     }
+<<<<<<< HEAD
                     className={`text-center ${
                       generateConfig.durationMinutes === mins
                         ? "mosaic-chip-active"
                         : "mosaic-chip"
                     }`}
+=======
+                    className={
+                      generateConfig.durationMinutes === mins
+                        ? "mosaic-segmented-item-active"
+                        : "mosaic-segmented-item"
+                    }
+>>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
                   >
                     {mins >= 60
                       ? `${mins % 60 === 0 ? mins / 60 : (mins / 60).toFixed(1)}hr`
@@ -860,10 +938,11 @@ export function WorkoutPanel({
             </div>
 
             {/* Equipment */}
-            <div>
-              <label className="mb-1.5 block text-xs text-white/60">
-                Equipment
-              </label>
+            <div
+              className="mosaic-section animate-fade-up"
+              style={{ animationDelay: "120ms" }}
+            >
+              <div className="mosaic-section-label">Equipment</div>
               <div className="flex flex-wrap gap-1.5">
                 {EQUIPMENT_OPTIONS.map((item) => {
                   const isSelected = generateConfig.equipment.includes(item);
@@ -879,23 +958,31 @@ export function WorkoutPanel({
                             : [...prev.equipment, item],
                         }))
                       }
-                      className={
+                      className={`rounded-full px-2.5 py-1 text-xs ${
                         isSelected ? "mosaic-chip-active" : "mosaic-chip"
-                      }
+                      }`}
                     >
+                      <span className="mr-1 opacity-60">
+                        {EQUIPMENT_ICONS[item]}
+                      </span>
                       {item}
                     </button>
                   );
                 })}
               </div>
               {generateConfig.equipment.length === 0 && (
+<<<<<<< HEAD
                 <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
                   Bodyweight only
                 </span>
+=======
+                <p className="mt-1.5 text-xs text-white/50">Bodyweight only</p>
+>>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
               )}
             </div>
 
             {/* Focus Areas */}
+<<<<<<< HEAD
             <div>
               <label className="mb-1.5 block text-xs text-white/60">
                 Focus Areas
@@ -931,24 +1018,144 @@ export function WorkoutPanel({
                 <span className="mt-1.5 inline-block rounded-full bg-white/5 px-2.5 py-1 text-[10px] text-white/30">
                   Full body
                 </span>
+=======
+            <div
+              className="mosaic-section animate-fade-up"
+              style={{ animationDelay: "180ms" }}
+            >
+              <button
+                type="button"
+                onClick={() => setFocusExpanded((v) => !v)}
+                className="flex w-full items-center justify-between"
+              >
+                <div className="mosaic-section-label mb-0">
+                  Focus Areas
+                  {generateConfig.focusGroups.length > 0 && (
+                    <span className="ml-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-400">
+                      {generateConfig.focusGroups.length}
+                    </span>
+                  )}
+                </div>
+                <svg
+                  className={`h-3.5 w-3.5 text-white/30 transition-transform ${focusExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              {!focusExpanded && generateConfig.focusGroups.length === 0 && (
+                <p className="mt-1.5 text-xs text-white/50">Full body</p>
+              )}
+
+              {!focusExpanded && generateConfig.focusGroups.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1">
+                  {generateConfig.focusGroups.map((g) => (
+                    <span
+                      key={g}
+                      className="mosaic-tag rounded-full px-2 py-0.5 text-xs"
+                    >
+                      {MUSCLE_GROUP_LABELS[g]}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {focusExpanded && (
+                <div className="mt-2 flex flex-col gap-3">
+                  {FOCUS_REGIONS.map((region) => (
+                    <div key={region.label}>
+                      <p className="mb-1.5 text-xs font-medium text-white/55">
+                        {region.label}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {region.groups.map((group) => {
+                          const isSelected =
+                            generateConfig.focusGroups.includes(group);
+                          return (
+                            <button
+                              key={group}
+                              type="button"
+                              onClick={() =>
+                                setGenerateConfig((prev) => ({
+                                  ...prev,
+                                  focusGroups: isSelected
+                                    ? prev.focusGroups.filter(
+                                        (g) => g !== group,
+                                      )
+                                    : [...prev.focusGroups, group],
+                                }))
+                              }
+                              className={`rounded-full px-2.5 py-1 text-xs ${
+                                isSelected
+                                  ? "mosaic-chip-active"
+                                  : "mosaic-chip"
+                              }`}
+                            >
+                              {MUSCLE_GROUP_LABELS[group]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {generateConfig.focusGroups.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setGenerateConfig((prev) => ({
+                          ...prev,
+                          focusGroups: [],
+                        }))
+                      }
+                      className="self-start text-xs text-white/40 transition-colors hover:text-white/60"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+>>>>>>> d63a40734096cc046e49bb9873f9891de07cb78c
               )}
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setView("plan-detail")}
-                className="mosaic-btn flex-1 py-2 text-xs font-medium"
-              >
-                Cancel
-              </button>
+            <div
+              className="flex flex-col items-center gap-2 animate-fade-up"
+              style={{ animationDelay: "240ms" }}
+            >
               <button
                 type="button"
                 onClick={handleRunGeneration}
-                className="mosaic-btn-primary flex-1 py-2 text-xs font-medium"
+                className="mosaic-btn-generate flex items-center justify-center gap-2"
               >
-                Generate
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z"
+                  />
+                </svg>
+                Generate Workout
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("plan-detail")}
+                className="text-xs text-white/40 transition-colors hover:text-white/60"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -977,7 +1184,11 @@ function PlanCard({
 }) {
   return (
     <div
-      className="group cursor-pointer rounded-lg border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/10"
+      className={`group cursor-pointer rounded-lg border p-3 transition-colors hover:bg-white/10 ${
+        plan.isActive
+          ? "border-emerald-500/20 bg-emerald-500/5"
+          : "border-white/5 bg-white/5"
+      }`}
       onClick={() => onSelect(plan._id)}
       onKeyDown={(e) => e.key === "Enter" && onSelect(plan._id)}
     >
@@ -1018,7 +1229,7 @@ function PlanCard({
           </button>
         </div>
       </div>
-      {plan.notes && <p className="mt-1 text-xs text-white/30">{plan.notes}</p>}
+      {plan.notes && <p className="mt-1 text-xs text-white/50">{plan.notes}</p>}
     </div>
   );
 }

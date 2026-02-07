@@ -49,11 +49,11 @@ export function MuscleFilter({
   onSelectGroup,
 }: MuscleFilterProps) {
   return (
-    <div className="pointer-events-auto mosaic-panel flex w-full shrink-0 flex-col gap-3 overflow-y-auto p-3">
+    <div className="pointer-events-auto mosaic-panel flex w-full shrink flex-col gap-3 overflow-y-auto p-4">
       {/* Group Filters */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-semibold text-white/70">
+          <span className="text-xs font-semibold text-white/80">
             Muscle Groups
           </span>
           {activeGroups.size > 0 && (
@@ -93,7 +93,7 @@ export function MuscleFilter({
 
       {/* Depth Filters */}
       <div>
-        <span className="mb-2 block text-xs font-semibold text-white/70">
+        <span className="mb-2 block text-xs font-semibold text-white/80">
           Depth Layer
         </span>
         <div className="flex gap-1.5">
