@@ -749,7 +749,7 @@
         <div class="card">
           <span class="card-icon">&#x1f9ec;</span>
           <h3>3D Body Visualization</h3>
-          <p>100+ individually selectable muscle meshes, color-coded by condition. See exactly which structures are affected at a glance.</p>
+          <p>100+ individually selectable muscle meshes with Cmd+Click multi-select, bilateral mode, and real-time condition coloring. Orbit freely even while inspecting.</p>
         </div>
         <div class="card">
           <span class="card-icon">&#x1f4da;</span>
@@ -813,14 +813,14 @@
           </ul>
         </div>
         <div class="card">
-          <h3>Camera Controls</h3>
+          <h3>Smart Interactions</h3>
           <ul class="bullet-list" style="font-size: 14px;">
-            <li>Orbit, zoom, pan</li>
-            <li>Front / Back presets</li>
-            <li>Left / Right side views</li>
-            <li>Isometric view</li>
-            <li>Toggle skeleton overlay</li>
-            <li>Adjustable muscle opacity</li>
+            <li><strong>Cmd+Click</strong> <span>multi-select muscles</span></li>
+            <li><strong>Alt+Click</strong> <span>override bilateral mode</span></li>
+            <li>Orbit &amp; zoom while editing</li>
+            <li>Click empty space to deselect</li>
+            <li>Front / Back view presets</li>
+            <li>Side labels (L/R) on hover</li>
           </ul>
         </div>
       </div>
@@ -843,10 +843,6 @@
               <span>Sets condition, pain, strength, mobility, and clinical summary for any muscle</span>
             </div>
             <div class="tool-chip">
-              <code>add_knot()</code>
-              <span>Records trigger points, adhesions, or spasms with severity</span>
-            </div>
-            <div class="tool-chip">
               <code>create_assessment()</code>
               <span>Generates clinical assessment with affected structures</span>
             </div>
@@ -859,12 +855,12 @@
         <div>
           <h3 style="font-size: 20px; margin-bottom: 20px; color: var(--accent);">User Flow</h3>
           <ul class="bullet-list">
+            <li><strong>Cmd+Click to multi-select muscles</strong> <span>&mdash; all selections appear as focus tags in chat</span></li>
             <li><strong>"My left shoulder hurts when I raise my arm"</strong></li>
+            <li><span>Selected muscles + active group filters sent as AI context</span></li>
             <li><span>AI queries RAG for shoulder pathology context</span></li>
             <li><span>AI calls <code style="color:var(--accent2)">update_muscle()</code> on relevant rotator cuff muscles</span></li>
-            <li><span>3D model updates in real time &mdash; affected muscles turn orange/red</span></li>
-            <li><span>AI responds with clinical reasoning and next steps</span></li>
-            <li><span>AI generates an evidence-based rehab workout</span></li>
+            <li><span>3D model updates in real time &mdash; affected muscles glow</span></li>
           </ul>
         </div>
       </div>
@@ -1019,7 +1015,6 @@
           <tr><td>users</td><td>Clerk-synced accounts</td><td>clerkId, name, email</td></tr>
           <tr><td>bodies</td><td>Body measurements</td><td>sex, weight, height, birthDate</td></tr>
           <tr><td>muscles</td><td>100+ muscles per body</td><td>meshId, condition, pain, strength, mobility</td></tr>
-          <tr><td>knots</td><td>Trigger points / adhesions</td><td>3D position, severity, type</td></tr>
           <tr><td>muscleHistory</td><td>Change audit trail</td><td>previous/new values, event type</td></tr>
           <tr><td>muscleAssessments</td><td>Clinical evidence chain</td><td>test name, value, confidence, reasoning</td></tr>
           <tr><td>conversations</td><td>Chat sessions</td><td>One active per user</td></tr>
@@ -1050,7 +1045,7 @@
         <div class="card">
           <span class="card-icon">&#x1f9d1;&#x200d;&#x1f4bb;</span>
           <h3>Spatial Understanding</h3>
-          <p>A 3D anatomical model with 100+ meshes gives both the user and the AI a shared spatial language for muscle groups and injury locations.</p>
+          <p>Cmd+Click multi-select lets you build complex muscle contexts. All 100+ mesh IDs are exposed to the AI so it can reason spatially about groups, sides, and relationships.</p>
         </div>
         <div class="card">
           <span class="card-icon">&#x1f504;</span>

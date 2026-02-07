@@ -303,36 +303,6 @@ _ACTION_TOOLS: list[ToolSpec] = [
         },
     ),
     ToolSpec(
-        name="add_knot",
-        kind=ToolKind.ACTION,
-        step_label="Adding trigger point",
-        schema={
-            "type": "function",
-            "function": {
-                "name": "add_knot",
-                "description": (
-                    "Add a trigger point, adhesion, or spasm to a muscle. "
-                    "Use when the user describes a specific localized point of tension or pain."
-                ),
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "meshId": {
-                            "type": "string",
-                            "description": "Exact mesh ID of the muscle",
-                        },
-                        "severity": {"type": "number", "description": "Severity 0-1"},
-                        "type": {
-                            "type": "string",
-                            "enum": ["trigger_point", "adhesion", "spasm"],
-                        },
-                    },
-                    "required": ["meshId", "severity", "type"],
-                },
-            },
-        },
-    ),
-    ToolSpec(
         name="create_assessment",
         kind=ToolKind.ACTION,
         step_label="Creating assessment",

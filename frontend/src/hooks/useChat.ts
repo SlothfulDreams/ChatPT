@@ -21,15 +21,6 @@ export interface UpdateMuscleAction {
   };
 }
 
-export interface AddKnotAction {
-  name: "add_knot";
-  params: {
-    meshId: string;
-    severity: number;
-    type: "trigger_point" | "adhesion" | "spasm";
-  };
-}
-
 export interface CreateAssessmentAction {
   name: "create_assessment";
   params: {
@@ -38,10 +29,7 @@ export interface CreateAssessmentAction {
   };
 }
 
-export type ChatAction =
-  | UpdateMuscleAction
-  | AddKnotAction
-  | CreateAssessmentAction;
+export type ChatAction = UpdateMuscleAction | CreateAssessmentAction;
 
 export interface AgentSubstep {
   tool: string;
