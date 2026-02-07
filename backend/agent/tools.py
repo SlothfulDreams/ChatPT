@@ -21,6 +21,15 @@ from dedalus_tools.tools import (
     get_patient_muscle_context,
 )
 
+# Friendly labels for RAG sub-tools
+_SUBTOOL_LABELS: dict[str, str] = {
+    "search_knowledge_base": "Searching knowledge base",
+    "search_by_muscle_group": "Searching by muscle group",
+    "search_by_condition": "Searching by condition",
+    "search_by_content_type": "Searching by content type",
+    "search_by_exercise": "Searching exercise database",
+}
+
 
 class ToolKind(Enum):
     INTERNAL = "internal"
@@ -59,7 +68,11 @@ def _get_research_client() -> AsyncDedalus:
     return _research_client
 
 
-async def research(query: str, focus: str = "") -> str:
+async def research(
+    query: str,
+    focus: str = "",
+    _event_queue: asyncio.Queue | None = None,
+) -> str:
     """Research clinical evidence using the physical therapy knowledge base.
 
     A sub-agent searches across exercises, conditions, muscle groups,
@@ -71,6 +84,7 @@ async def research(query: str, focus: str = "") -> str:
         focus: Optional focus area to guide research. Can be a muscle group
             (e.g., "shoulders"), condition (e.g., "ACL tear"), content type
             (e.g., "exercise_technique"), or exercise name (e.g., "bench press").
+        _event_queue: Internal -- queue for pushing substep events to the SSE stream.
 
     Returns:
         Synthesized research findings with cited sources.
@@ -83,7 +97,7 @@ async def research(query: str, focus: str = "") -> str:
     if focus:
         prompt += f"\nFocus area: {focus}"
 
-    result = await runner.run(
+    stream = runner.run(
         input=prompt,
         model=model,
         tools=RAG_TOOLS,
@@ -96,8 +110,60 @@ async def research(query: str, focus: str = "") -> str:
             "concisely with source references."
         ),
         max_tokens=2048,
+        stream=True,
     )
-    return result.final_output
+
+    final_text = ""
+    seen_tools: set[str] = set()
+
+    async for chunk in stream:
+        if not hasattr(chunk, "choices") or not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta if hasattr(chunk.choices[0], "delta") else None
+        if not delta:
+            continue
+
+        # Detect sub-agent tool calls and emit substep events
+        if delta.tool_calls and _event_queue:
+            for tc in delta.tool_calls:
+                if (
+                    tc.function
+                    and tc.function.name
+                    and tc.function.name not in seen_tools
+                ):
+                    seen_tools.add(tc.function.name)
+                    label = _SUBTOOL_LABELS.get(tc.function.name, tc.function.name)
+                    await _event_queue.put(
+                        {"type": "substep", "tool": tc.function.name, "label": label}
+                    )
+
+        # When we see finish_reason=tool_calls, tools are about to execute.
+        # When we see text after that, tools have completed.
+        fr = (
+            chunk.choices[0].finish_reason
+            if hasattr(chunk.choices[0], "finish_reason")
+            else None
+        )
+        if fr == "tool_calls" and _event_queue:
+            # Mark all seen tools as executing (they run between this chunk and the next text)
+            pass
+
+        if delta.content:
+            final_text += delta.content
+
+    # Mark all substeps complete
+    if _event_queue:
+        for tool_name in seen_tools:
+            label = _SUBTOOL_LABELS.get(tool_name, tool_name)
+            await _event_queue.put(
+                {
+                    "type": "substep_complete",
+                    "tool": tool_name,
+                    "label": f"{label} done",
+                }
+            )
+
+    return final_text
 
 
 # ---------------------------------------------------------------------------

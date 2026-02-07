@@ -543,16 +543,33 @@ function StepsIndicator({ steps }: { steps: AgentStep[] }) {
   return (
     <div className="mb-2 space-y-1 border-b border-white/5 pb-2">
       {steps.map((step) => (
-        <div
-          key={step.tool}
-          className="flex items-center gap-1.5 text-[10px] text-white/40"
-        >
-          {step.status === "running" ? (
-            <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-white/20 border-t-white/60" />
-          ) : (
-            <span className="text-emerald-400/70">--</span>
+        <div key={step.tool}>
+          <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+            {step.status === "running" ? (
+              <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border border-white/20 border-t-white/60" />
+            ) : (
+              <span className="text-emerald-400/70">--</span>
+            )}
+            <span>{step.label}</span>
+          </div>
+          {/* Nested substeps (research sub-agent tool calls) */}
+          {step.substeps && step.substeps.length > 0 && (
+            <div className="ml-4 mt-0.5 space-y-0.5">
+              {step.substeps.map((sub) => (
+                <div
+                  key={sub.tool}
+                  className="flex items-center gap-1.5 text-[10px] text-white/25"
+                >
+                  {sub.status === "running" ? (
+                    <span className="inline-block h-2 w-2 animate-spin rounded-full border border-white/15 border-t-white/40" />
+                  ) : (
+                    <span className="text-emerald-400/50">--</span>
+                  )}
+                  <span>{sub.label}</span>
+                </div>
+              ))}
+            </div>
           )}
-          <span>{step.label}</span>
         </div>
       ))}
     </div>

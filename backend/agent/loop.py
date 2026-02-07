@@ -163,14 +163,33 @@ async def run_agent_stream(
                 # Emit step start
                 yield _sse({"type": "step", "label": spec.step_label, "tool": name})
 
-                # Execute -- async tools (research sub-agent) awaited directly,
-                # sync tools (get_patient_muscle_context) run in thread pool
                 try:
-                    if inspect.iscoroutinefunction(spec.function):
+                    if name == "research":
+                        # Research sub-agent: stream substep events via queue
+                        event_queue: asyncio.Queue = asyncio.Queue()
+                        params["_event_queue"] = event_queue
+
+                        # Run research and drain substep events concurrently
+                        research_task = asyncio.create_task(spec.function(**params))
+                        while not research_task.done():
+                            try:
+                                event = await asyncio.wait_for(
+                                    event_queue.get(), timeout=0.1
+                                )
+                                yield _sse(event)
+                            except asyncio.TimeoutError:
+                                continue
+                        result = research_task.result()
+                        # Drain remaining events
+                        while not event_queue.empty():
+                            yield _sse(event_queue.get_nowait())
+                        result_str = str(result)
+                    elif inspect.iscoroutinefunction(spec.function):
                         result = await spec.function(**params)
+                        result_str = str(result)
                     else:
                         result = await asyncio.to_thread(spec.function, **params)
-                    result_str = str(result)
+                        result_str = str(result)
                 except Exception as e:
                     result_str = f"Tool error: {e}"
 

@@ -43,10 +43,17 @@ export type ChatAction =
   | AddKnotAction
   | CreateAssessmentAction;
 
+export interface AgentSubstep {
+  tool: string;
+  label: string;
+  status: "running" | "complete";
+}
+
 export interface AgentStep {
   tool: string;
   label: string;
   status: "running" | "complete";
+  substeps?: AgentSubstep[];
 }
 
 export interface ChatMessage {
@@ -316,6 +323,44 @@ export function useChat(allMeshIds?: string[], activeGroups?: Set<string>) {
                             ...s,
                             label: data.label,
                             status: "complete" as const,
+                          }
+                        : s,
+                    ),
+                  );
+                } else if (data.type === "substep") {
+                  // Add substep under the currently running "research" step
+                  setStreamingSteps((prev) =>
+                    prev.map((s) =>
+                      s.tool === "research"
+                        ? {
+                            ...s,
+                            substeps: [
+                              ...(s.substeps ?? []),
+                              {
+                                tool: data.tool,
+                                label: data.label,
+                                status: "running" as const,
+                              },
+                            ],
+                          }
+                        : s,
+                    ),
+                  );
+                } else if (data.type === "substep_complete") {
+                  setStreamingSteps((prev) =>
+                    prev.map((s) =>
+                      s.tool === "research"
+                        ? {
+                            ...s,
+                            substeps: (s.substeps ?? []).map((sub) =>
+                              sub.tool === data.tool
+                                ? {
+                                    ...sub,
+                                    label: data.label,
+                                    status: "complete" as const,
+                                  }
+                                : sub,
+                            ),
                           }
                         : s,
                     ),
