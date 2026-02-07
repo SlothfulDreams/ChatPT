@@ -9,7 +9,7 @@ import type { MuscleStates } from "@/types/muscle";
 import {
   CONDITION_RENDERING,
   createDefaultMuscleState,
-  getPainColor,
+  getMuscleMaterialColor,
 } from "@/types/muscle";
 import { type MuscleDepth, shouldShowDepth } from "@/types/muscle-depth";
 import {
@@ -243,19 +243,15 @@ export function MuscleModel({
       const condition = state.condition;
       const conditionParams = CONDITION_RENDERING[condition];
 
-      // Determine color
-      let finalColor: THREE.Color;
-      if (condition !== "healthy") {
-        const [r, g, b] = conditionParams.baseColor;
-        finalColor = new THREE.Color(r, g, b);
-      } else {
-        finalColor = getPainColor(state.metrics.pain);
-      }
+      // Determine color: condition hue + strength-driven lightness
+      let finalColor = getMuscleMaterialColor(
+        condition,
+        state.metrics.strength,
+      );
 
-      // Opacity: condition base * strength factor
-      const strengthFactor = 0.4 + 0.6 * state.metrics.strength;
+      // Opacity: strength floor 0.4, ceiling 1.0
       let finalOpacity =
-        conditionParams.opacity * strengthFactor * renderingSettings.opacity;
+        (0.4 + 0.6 * state.metrics.strength) * renderingSettings.opacity;
 
       // Dimming: muscles outside active group or outside selection get dulled
       const isHighlighted =
@@ -295,7 +291,7 @@ export function MuscleModel({
         transparent: true,
         opacity: finalOpacity,
         metalness: vo?.metalness ?? renderingSettings.metalness,
-        roughness: vo?.roughness ?? renderingSettings.roughness,
+        roughness: vo?.roughness ?? 1.0,
         wireframe: renderingSettings.wireframe,
         emissive: emissiveColor,
         emissiveIntensity,

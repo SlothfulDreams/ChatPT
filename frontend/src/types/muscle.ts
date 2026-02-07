@@ -119,6 +119,38 @@ export const CONDITION_RENDERING: Record<
 };
 
 // ============================================
+// HSL-based condition rendering (strength = primary visual signal)
+// ============================================
+
+export const CONDITION_HSL: Record<
+  MuscleCondition,
+  { hue: number; saturation: number }
+> = {
+  healthy: { hue: 130, saturation: 0.6 },
+  tight: { hue: 40, saturation: 0.65 },
+  knotted: { hue: 25, saturation: 0.6 },
+  strained: { hue: 10, saturation: 0.65 },
+  torn: { hue: 0, saturation: 0.8 },
+  recovering: { hue: 200, saturation: 0.5 },
+  inflamed: { hue: 5, saturation: 0.75 },
+  weak: { hue: 50, saturation: 0.3 },
+  fatigued: { hue: 280, saturation: 0.3 },
+};
+
+/**
+ * Strength-driven color: condition sets hue/saturation, strength drives lightness.
+ * strength=0 -> very light (0.85), strength=1 -> dark (0.25).
+ */
+export function getMuscleMaterialColor(
+  condition: MuscleCondition,
+  strength: number,
+): THREE.Color {
+  const { hue, saturation } = CONDITION_HSL[condition];
+  const lightness = 0.85 - Math.min(1, Math.max(0, strength)) * 0.6;
+  return new THREE.Color().setHSL(hue / 360, saturation, lightness);
+}
+
+// ============================================
 // Pain Gradient: Green -> Yellow -> Orange -> Red
 // ============================================
 

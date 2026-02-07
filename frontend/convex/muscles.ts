@@ -60,11 +60,38 @@ export const upsert = mutation({
       if (args.notes !== undefined) updates.notes = args.notes;
       if (args.summary !== undefined) updates.summary = args.summary;
 
+      // Detect if anything actually changed
+      const changed =
+        (args.condition !== undefined &&
+          args.condition !== existing.condition) ||
+        (args.pain !== undefined && args.pain !== existing.pain) ||
+        (args.strength !== undefined && args.strength !== existing.strength) ||
+        (args.mobility !== undefined && args.mobility !== existing.mobility) ||
+        (args.summary !== undefined && args.summary !== existing.summary) ||
+        (args.notes !== undefined && args.notes !== existing.notes);
+
       await ctx.db.patch(existing._id, updates);
+
+      if (changed) {
+        await ctx.db.insert("muscleHistory", {
+          muscleId: existing._id,
+          eventType: "condition_changed",
+          condition: args.condition ?? existing.condition,
+          severity: args.pain ?? existing.pain,
+          painLevel: args.pain ?? existing.pain,
+          source: "ai_agent",
+          notes: args.summary,
+          metadata: {
+            strength: args.strength ?? existing.strength,
+            mobility: args.mobility ?? existing.mobility,
+          },
+        });
+      }
+
       return existing._id;
     }
 
-    return await ctx.db.insert("muscles", {
+    const muscleId = await ctx.db.insert("muscles", {
       bodyId: args.bodyId,
       meshId: args.meshId,
       condition: args.condition ?? "healthy",
@@ -75,6 +102,34 @@ export const upsert = mutation({
       summary: args.summary,
       updatedAt: Date.now(),
     });
+
+    // Record initial history entry for new muscles
+    await ctx.db.insert("muscleHistory", {
+      muscleId,
+      eventType: "condition_changed",
+      condition: args.condition ?? "healthy",
+      severity: args.pain ?? 0,
+      painLevel: args.pain ?? 0,
+      source: "ai_agent",
+      notes: args.summary,
+      metadata: {
+        strength: args.strength ?? 1,
+        mobility: args.mobility ?? 1,
+      },
+    });
+
+    return muscleId;
+  },
+});
+
+export const getHistory = query({
+  args: { muscleId: v.id("muscles") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("muscleHistory")
+      .withIndex("by_muscle", (q) => q.eq("muscleId", args.muscleId))
+      .order("desc")
+      .collect();
   },
 });
 

@@ -27,6 +27,7 @@ import {
 } from "@/types/rendering";
 import { CameraController } from "./camera-controller";
 import { ChatPanel } from "./chat-panel";
+import { MuscleDetailPanel } from "./muscle-detail-panel";
 import { MuscleFilter } from "./muscle-filter";
 import { MuscleModel } from "./muscle-model";
 import { SkeletonModel } from "./skeleton-model";
@@ -482,20 +483,26 @@ export function PhysioScene() {
         </Suspense>
       </Canvas>
 
-      {/* Floating edit panel at projected muscle position */}
+      {/* Floating edit + detail panel at projected muscle position */}
       {!isWorkoutMode && editingMuscle && editScreenPos && (
         <EditPanelPositioner
           screenX={editScreenPos.x}
           screenY={editScreenPos.y}
         >
-          <StructureEditPanel3D
-            muscleId={editingMuscle}
-            visual={visualOverrides[editingMuscle] ?? DEFAULT_VISUAL}
-            onVisualChange={(v) =>
-              setVisualOverrides((prev) => ({ ...prev, [editingMuscle]: v }))
-            }
-            onClose={handleCloseEdit}
-          />
+          <div className="flex flex-col gap-2">
+            <StructureEditPanel3D
+              muscleId={editingMuscle}
+              visual={visualOverrides[editingMuscle] ?? DEFAULT_VISUAL}
+              onVisualChange={(v) =>
+                setVisualOverrides((prev) => ({ ...prev, [editingMuscle]: v }))
+              }
+              onClose={handleCloseEdit}
+            />
+            <MuscleDetailPanel
+              muscleId={editingMuscle}
+              muscleState={muscleStates[editingMuscle] ?? null}
+            />
+          </div>
         </EditPanelPositioner>
       )}
 
